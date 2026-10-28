@@ -1,0 +1,1416 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1e5a7d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="保险助理">
+<meta name="robots" content="noindex">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px;font-family:system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>保险助理</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@700&display=swap">
+</head>
+<body>
+<style>
+/* Layout: left rail of sections on desktop, scrolling tab strip on phone; one floating "记录会面" button always in reach.
+   Look: light only, sea-and-island theme (Pangkor), faint wave pattern on the page ground, white cards without borders. */
+:root{
+  color-scheme:light;
+  --bg:#f6f9f9; --surface:#ffffff; --surface2:#f0f5f5; --ink:#1c2827; --muted:#66756f; --line:#e3eaea;
+  --accent:#1e5a7d; --accent-ink:#ffffff; --accent-soft:#e4f0f5;
+  --s-prospect:#b7a5d6; --s-open:#8cc3d3; --s-present:#1e5a7d; --s-followup:#e5a645; --s-closing:#3c9a69;
+  --sea:#d9eef1; --sea-line:#a9d3da; --sun:#f6c86b; --leaf:#74b38d; --hill:#d5eadb; --trunk:#9a7a4c;
+  --c-client:#0d8a80; --c-client-bg:#d6f1ed; --c-work:#2d6bd6; --c-work-bg:#dde8fb; --c-personal:#cf4336; --c-personal-bg:#fadedb;
+  --pA:#b23d0c; --pA-bg:#fde3d1; --pB:#7f6105; --pB-bg:#f6ecc4; --pC:#5f6670; --pC-bg:#e6e8eb;
+  --ok:#1d7548; --ok-bg:#d9f0e3; --warn:#9a5700; --warn-bg:#fbebd0; --bad:#b0261a; --bad-bg:#fbe0dc;
+  --shadow:0 1px 2px rgba(16,30,28,.06),0 4px 16px rgba(16,30,28,.06);
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-display:"Noto Serif SC","Songti SC",serif;
+  --hour:46px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background-color:var(--bg);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='48' viewBox='0 0 160 48'%3E%3Cpath d='M0 24 q20 -9 40 0 t40 0 t40 0 t40 0' fill='none' stroke='%231e5a7d' stroke-opacity='.045' stroke-width='1.5'/%3E%3C/svg%3E");background-attachment:fixed;color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+.num,td.n,.stat b{font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+.app{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:100%}
+nav.rail{position:sticky;top:0;height:100vh;padding:22px 12px;border-right:1px solid var(--line);background:rgba(255,255,255,.85);display:flex;flex-direction:column;gap:2px}
+.brand{font-family:var(--f-display);font-size:19px;padding:0 10px 4px;display:flex;align-items:center;gap:8px}
+.brand svg{width:38px;height:38px;flex:none}
+.brand span{font-size:17px;line-height:1.3}
+.hero{display:flex;align-items:center;justify-content:space-between;gap:16px;border-radius:18px;padding:22px 26px;overflow:hidden;
+  background:linear-gradient(180deg,#e9f5f7 0%,#f9fcfc 100%)}
+.hero-txt{display:flex;flex-direction:column;gap:10px;min-width:0}
+.wx{flex:none;width:250px;max-width:46%;background:rgba(255,255,255,.75);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 2px rgba(30,70,80,.06)}
+.wx-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.wx-loc{font-size:13px;font-weight:700;color:var(--accent)}
+.wx-time{font-size:26px;font-weight:700;line-height:1.1}
+.wx-date{font-size:13px;color:var(--muted)}
+.wx-main{display:flex;align-items:center;gap:10px;margin-top:6px}
+.wx-main svg{width:48px;height:48px;flex:none}
+.wx-temp{font-size:24px;font-weight:700;line-height:1.1}
+.wx-desc{font-size:14px;color:var(--ink)}
+.wx-meta{font-size:12px;color:var(--muted)}
+.wx-src{font-size:11px;color:var(--muted)}
+.empty-art{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;padding:6px 0}
+.empty-art svg{width:44px;height:16px;flex:none}
+.brand-sub{font-size:12px;color:var(--muted);padding:0 10px 16px;letter-spacing:.02em}
+.nav-btn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:0;background:none;padding:9px 10px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:500}
+.nav-btn:hover{background:var(--surface2);color:var(--ink)}
+.nav-btn[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+.nav-l{display:inline-flex;align-items:center;gap:10px}
+.ic{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:9px;flex:none}
+.ic svg{width:17px;height:17px}
+.ic.lg{width:42px;height:42px;border-radius:13px}
+.ic.lg svg{width:24px;height:24px}
+.ttl{display:flex;align-items:center;gap:10px}
+h1.ttl{gap:12px}
+.nav-btn[aria-current="page"] .ic{box-shadow:0 0 0 2px var(--surface),0 0 0 3px currentColor}
+.nav-badge{font-size:11px;min-width:20px;padding:0 6px;border-radius:10px;background:var(--bad);color:#fff;text-align:center;line-height:18px}
+main{min-width:0;padding-block:24px 110px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font-family:var(--f-display);font-size:26px;line-height:1.25;margin:0;text-wrap:balance}
+h2{font-size:16px;margin:0;font-weight:700}
+h3{font-size:14px;margin:0;font-weight:700}
+.sub{color:var(--muted);font-size:13px}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.panel{background:var(--surface);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0;box-shadow:0 1px 2px rgba(30,70,80,.05),0 6px 20px rgba(30,70,80,.04)}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);padding:7px 13px;border-radius:8px;cursor:pointer;font-weight:500;font-size:14px;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:6px;color:var(--ink)}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:4px 9px;font-size:13px}
+.btn.big{padding:12px 20px;font-size:16px;font-weight:700;border-radius:12px;gap:10px;border:0;box-shadow:0 1px 2px rgba(30,70,80,.08),0 4px 14px rgba(30,70,80,.08)}
+.btn.big svg{width:24px;height:24px;flex:none}
+.btn.big.teal{background:var(--c-client-bg);color:var(--c-client)}
+.btn.big.blue{background:var(--c-work-bg);color:var(--c-work)}
+.btn.big.navy{background:var(--accent);color:var(--accent-ink)}
+.btn.big:hover{filter:brightness(.97)}
+.btn.mid{padding:7px 14px;font-weight:700;border-radius:10px;gap:7px}
+.btn.mid svg{width:18px;height:18px}
+.ta{position:relative}
+.ta-list{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);z-index:5;max-height:300px;overflow:auto;padding:4px}
+.ta-item{display:flex;flex-wrap:wrap;align-items:center;gap:6px;width:100%;text-align:left;border:0;background:none;padding:9px 10px;border-radius:8px;cursor:pointer;color:var(--ink);font-size:14px}
+.ta-item:hover,.ta-item.on{background:var(--accent-soft)}
+.ta-item .hint{margin-left:auto}
+.ta-item.new{color:var(--accent);font-weight:700;border-top:1px solid var(--line);border-radius:0 0 8px 8px}
+.ta-ask{background:var(--warn-bg);border-radius:10px;padding:9px 12px;font-size:14px;color:var(--ink);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.stage-pick{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:6px}
+.stage-pick label{position:relative;cursor:pointer}
+.stage-pick input{position:absolute;opacity:0;pointer-events:none}
+.stage-pick span{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px;border:1.5px solid var(--line);border-radius:10px;font-weight:700;color:var(--ink);font-size:14px;text-align:center}
+.stage-pick span small{font-weight:400;color:var(--muted);font-size:11px}
+.stage-pick input:checked+span{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.stage-pick input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.btn.ghost{border-color:transparent;background:none}
+.btn[disabled],.btn[aria-disabled="true"]{opacity:.45;cursor:not-allowed;pointer-events:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;padding:1px 8px;border-radius:999px;background:var(--surface2);color:var(--muted);white-space:nowrap;line-height:20px}
+.chip.pA{background:var(--pA-bg);color:var(--pA);font-weight:700}
+.chip.pB{background:var(--pB-bg);color:var(--pB)}
+.chip.pC{background:var(--pC-bg);color:var(--pC)}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.bad{background:var(--bad-bg);color:var(--bad)}
+.chip.st{background:var(--accent-soft);color:var(--accent)}
+.chip.rc{background:#f0e9f9;color:#6c49ad}
+.mod-pick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mod-pick label{position:relative;cursor:pointer}
+.mod-pick input{position:absolute;opacity:0;pointer-events:none}
+.mod-pick span{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border:1.5px solid var(--line);border-radius:12px;font-weight:700;font-size:15px;color:var(--muted)}
+.mod-pick input:checked+span{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.mod-pick input[value=recruit]:checked+span{border-color:#6c49ad;background:#f0e9f9;color:#6c49ad}
+.mod-pick input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.mod-pick svg{width:20px;height:20px}
+.close-box{background:var(--ok-bg);border-radius:12px;padding:12px;display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.close-box .hint{grid-column:1/-1}
+.chip.ex{border:1px dashed var(--muted);background:none}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.dot.client{background:var(--c-client)}.dot.work{background:var(--c-work)}.dot.personal{background:var(--c-personal)}
+.list{display:flex;flex-direction:column}
+.item{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);min-width:0}
+.item:first-child{border-top:0}
+.item .grow{flex:1;min-width:0}
+.item .t{font-weight:500;overflow:hidden;text-overflow:ellipsis}
+.item .m{font-size:13px;color:var(--muted)}
+.clickable{cursor:pointer}
+.mg{border-top:1px solid var(--line)}
+.mg:first-child{border-top:0}
+.mg-h{display:flex;align-items:center;gap:10px;width:100%;padding:12px 4px;border:0;background:none;text-align:left;cursor:pointer;color:var(--ink)}
+.mg-h .grow{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.mg-h .t{font-weight:700;font-size:15px}
+.mg-h .m{flex-basis:100%;font-size:13px;color:var(--muted)}
+.mg-h:hover .t{color:var(--accent)}
+.chev{color:var(--muted);transition:transform .15s}
+.mg.open .chev{transform:rotate(180deg)}
+.mg.open{background:var(--surface2);border-radius:12px;border-top-color:transparent}
+.mg-body{padding:6px 12px 14px;display:flex;flex-direction:column;gap:10px}
+.clickable:hover .t{color:var(--accent)}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+div.empty::before{content:"";display:inline-block;width:40px;height:12px;margin-right:10px;vertical-align:middle;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='12' viewBox='0 0 40 12'%3E%3Cpath d='M1 6 q4.75 -5 9.5 0 t9.5 0 t9.5 0 t9.5 0' fill='none' stroke='%23a9d3da' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat}
+.stats{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+.stat{background:var(--surface2);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat span{font-size:12px;color:var(--muted)}
+.stat b{font-size:22px;font-weight:700;line-height:1.2}
+.stat small{font-size:11px;color:var(--muted)}
+.banner{border-radius:10px;padding:10px 14px;font-size:14px;background:var(--warn-bg);color:var(--warn)}
+.banner.info{background:var(--accent-soft);color:var(--accent)}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font-size:12px;color:var(--muted);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right;white-space:nowrap}
+input[type=text],input[type=tel],input[type=date],input[type=time],input[type=number],input[type=month],input[type=search],select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-width:0}
+textarea{min-height:64px;resize:vertical}
+label.f,div.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+.f.req>span::after{content:" *";color:var(--bad)}
+.form{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.form .full{grid-column:1/-1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:var(--surface);padding:6px 12px;cursor:pointer;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+details summary{cursor:pointer;color:var(--accent);font-size:14px}
+.err{color:var(--bad);font-size:13px}
+.hint{font-size:12px;color:var(--muted)}
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(10,18,16,.45);display:flex;align-items:flex-start;justify-content:center;z-index:50;overflow-y:auto;padding:max(24px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 24px max(12px,env(safe-area-inset-left,0px))}
+.modal{background:var(--surface);border-radius:14px;width:100%;max-width:680px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow)}
+.modal-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.modal-f{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.fab{position:fixed;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:40;border-radius:999px;padding:13px 20px;box-shadow:var(--shadow);font-size:15px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;z-index:60}
+/* calendar */
+.cal-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+/* calendar page fills exactly one screen: header, week stats strip, then the 07:00–23:00 grid takes the rest.
+   Events are placed in % of the day (960 minutes), so the grid stretches to whatever height is left. */
+body.fit .app{height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));grid-template-rows:minmax(0,1fr)}
+body.fit main{height:100%;overflow:hidden;padding-block:14px}
+body.fit .wrap{height:100%;gap:10px}
+body.fit #fab{display:none}
+.cal-page{display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
+.cal-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.cal-top h1{font-size:20px}
+.wstrip{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.wchip{display:inline-flex;align-items:baseline;gap:6px;padding:3px 10px;border-radius:8px;background:var(--surface);box-shadow:0 1px 2px rgba(30,70,80,.06);font-size:12px;color:var(--muted);white-space:nowrap}
+.wchip b{font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}
+.wchip.win{background:var(--ok-bg)}
+.cal-legend{font-size:12px;gap:10px}
+.wline{flex:none;background:var(--surface);border-radius:12px;padding:8px 12px 4px;box-shadow:0 1px 2px rgba(30,70,80,.05),0 6px 20px rgba(30,70,80,.04);display:flex;flex-direction:column;gap:4px}
+.wline .lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);align-items:center}
+.wline .lg span{display:inline-flex;align-items:center;gap:5px}
+.wline .lg b{color:var(--ink);font-variant-numeric:tabular-nums}
+.wline svg{display:block;width:100%;height:clamp(96px,17vh,140px)}
+.cal-scroll{flex:1;min-height:0;overflow:auto}
+.cal{display:grid;grid-template-columns:44px repeat(var(--cols),minmax(0,1fr));grid-template-rows:auto minmax(0,1fr);height:100%;min-height:300px}
+.cal-dh{background:var(--surface);border-bottom:1px solid var(--line);padding:5px 4px;text-align:center;font-size:12px;cursor:pointer;z-index:2}
+.cal-dh b{display:block;font-size:14px;line-height:1.2}
+.stage-tiles{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+.stage-tile{border-radius:10px;padding:10px 12px;background:var(--surface2);display:flex;flex-direction:column;gap:2px}
+.stage-tile span{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.stage-tile b{font-size:26px;line-height:1.2}
+.sw{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}
+.cal-dh.today b{color:var(--accent)}
+.cal-dh.today{background:var(--accent-soft)}
+.cal-gut{position:relative}
+.cal-gut span{position:absolute;right:5px;font-size:10px;color:var(--muted);margin-top:1px}
+.cal-col{position:relative;border-left:1px solid var(--line);cursor:copy;
+  background-image:linear-gradient(to bottom,var(--line) 1px,transparent 1px);background-size:100% calc(100% / 16)}
+.cal-col.today{background-color:color-mix(in srgb,var(--accent-soft) 45%,transparent)}
+.ev{position:absolute;left:2px;right:2px;border-radius:6px;padding:3px 6px;font-size:12px;line-height:1.3;overflow:hidden;cursor:pointer;border-left:3px solid}
+.ev.client{background:var(--c-client-bg);border-color:var(--c-client);color:var(--ink)}
+.ev.work{background:var(--c-work-bg);border-color:var(--c-work);color:var(--ink)}
+.ev.personal{background:var(--c-personal-bg);border-color:var(--c-personal);color:var(--ink)}
+.ev.cancelled{opacity:.5;text-decoration:line-through}
+.ev.done::after{content:"✓";position:absolute;right:5px;top:2px;font-weight:700}
+.ev b{display:block;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev i{font-style:normal;color:var(--muted);font-size:11px}
+.now-line{position:absolute;left:0;right:0;height:2px;background:var(--bad);z-index:1;pointer-events:none}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+/* pipeline */
+.kanban{--n:4;display:grid;grid-template-columns:repeat(var(--n),minmax(190px,1fr));gap:12px;overflow-x:auto;padding-bottom:4px}
+.kcol{background:var(--surface2);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.kcol-h{display:flex;justify-content:space-between;align-items:baseline;padding:2px 4px}
+.kcard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px}
+.kcard.hot{border-color:var(--pA)}
+/* client profile */
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 18px;margin:0}
+.dl div{min-width:0}
+.dl dt{font-size:12px;color:var(--muted)}
+.dl dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.tl{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:6px}
+.tl-item{position:relative;padding:0 0 18px 18px;display:flex;flex-direction:column;gap:4px}
+.tl-item::before{content:"";position:absolute;left:-7px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--accent)}
+.tl-item p{margin:0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.tl-item .lbl{color:var(--muted);font-size:12px;margin-right:4px}
+.ai-box{background:var(--surface2);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;font-size:14px}
+.ai-box ul{margin:0;padding-left:18px}
+.ai-box h3{font-size:13px;color:var(--muted)}
+.pre{white-space:pre-wrap;font-size:14px;overflow-wrap:anywhere}
+tr.hot td:first-child{font-weight:700}
+.bar-chart text{fill:var(--muted);font-size:11px}
+@media (max-width:820px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  nav.rail{position:sticky;top:env(safe-area-inset-top,0px);height:auto;flex-direction:row;overflow-x:auto;padding:8px max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));border-right:0;border-bottom:1px solid var(--line);z-index:30;gap:4px}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:31;background:var(--surface)}
+  .brand,.brand-sub{display:none}
+  body.fit .app{grid-template-rows:auto minmax(0,1fr)}
+  body.fit main{padding-block:8px}
+  .cal-legend{display:none}
+  .hero{padding:16px 18px}
+  .hero{flex-direction:column;align-items:stretch}
+  .wx{width:auto;max-width:none}
+  .nav-btn{width:auto;white-space:nowrap;flex:none}
+  main{padding-block:16px 110px}
+  h1{font-size:22px}
+  .kanban{grid-template-columns:repeat(var(--n),minmax(220px,78vw))}
+  .btn.big{padding:11px 16px;font-size:15px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="app">
+  <nav class="rail" id="nav" aria-label="主要栏目"></nav>
+  <main><div class="wrap" id="view"></div></main>
+</div>
+<button class="btn primary fab" data-act="newMeeting" id="fab">＋ 记录会面</button>
+<div id="modal-root"></div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- constants ---------- */
+const STAGES=[["open","开发","Open"],["present","呈现","Present"],["followup","跟进","Follow-up"],["closing","成交","Closing"]];
+/* recruitment track: stored on meetings as stage with module "recruit", on clients as rstage */
+const RSTAGES=[["ro","事业开发","RO"],["rp","事业呈现","RP"],["rf","事业跟进","RF"],["mip","事业讲座","MIP"],["cop","事业定位","COP"],["pcil","考试","PCIL"],["contract","签约","CONTRACT"]];
+const rstageName=k=>{const s=RSTAGES.find(x=>x[0]===k);return s?`${s[2]} ${s[1]}`:""};
+const RSTAGE_COLOR={ro:"#cdbce9",rp:"#ad90d8",rf:"#8c66c6",mip:"#6c49ad",cop:"#e7a3c5",pcil:"#cf6b9c",contract:"#a8336f"};
+const STAGE_IDX=Object.fromEntries(STAGES.map((s,i)=>[s[0],i]));
+const stageName=k=>{const s=STAGES.find(x=>x[0]===k);return s?s[1]:"未设定"};
+const PRIOS={A:"A 热门",B:"B 温和",C:"C 冷淡/流失"};
+const CATS={client:"客户会面",work:"会议/课程/培训",personal:"个人事务"};
+const ACT_ST={planned:"计划中",done:"已完成",cancelled:"已取消",rescheduled:"已改期"};
+const CHANNELS={f2f:"面对面",phone:"电话",wa:"WhatsApp",online:"线上会议",other:"其他"};
+const WAITING={none:"无",proposal:"等我修改方案",docs:"等客户文件",uw:"等核保结果",decision:"等客户决定"};
+const DEAL_ST={agreed:"客户已同意",submitted:"已提交申请",underwriting:"核保中",approved:"已批准",inforce:"已生效",declined:"拒保",ntu:"未接受/取消"};
+const OPEN_DEAL=["agreed","submitted","underwriting","approved"];
+const LANGS={zh:"中文",en:"English",ms:"Bahasa Melayu"};
+const GENDER={"":"未记录",m:"男",f:"女"};
+const SMOKER={"":"未记录",no:"不吸烟",yes:"吸烟",quit:"已戒烟"};
+const MARITAL={"":"未记录",single:"单身",married:"已婚",divorced:"离婚",widowed:"丧偶"};
+const STAGE_HINTS={
+  prospect:"潜在客户：怎么认识的、初步印象、有没有兴趣再约、适合谈什么",
+  open:"开发阶段：初步讨论、客户背景与需求、现有保障、可能的保障缺口、约定的下一步",
+  present:"方案讲解：讲解了哪些产品/计划、建议保额与保障、预估保费、客户反馈、问题与异议、要修改的地方",
+  followup:"跟进阶段：还没解决的顾虑、延迟决定的原因、还需要的文件资料、之前的跟进、约定的下一步",
+  closing:"成交阶段：投保书准备与提交、待补文件、核保进度、客户接受条款、批核与生效"
+};
+const VIEWS=[["home","今日"],["calendar","成功宝典（日历）"],["clients","客户"],["meetings","会面记录"],["followups","跟进"],["pipeline","销售管道"],["reports","业绩报告"],["agent","每日助理"]];
+const SAMPLE_ERR={not_granted:"你没有允许这个页面使用 Claude，AI 功能已关闭。",sampling_disabled:"这个账号暂时不能使用 AI 功能。",rate_limited:"AI 请求太频繁，请稍后再试。",session_expired:"登录已过期，请重新登录 claude.ai。",refused:"AI 无法处理这份内容，请修改后再试。",invalid_json:"AI 返回的格式不正确，请再试一次。",prompt_too_large:"资料太多，AI 一次读不完。"};
+
+/* ---------- date + format utils ---------- */
+const pad=n=>String(n).padStart(2,"0");
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseD=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const isDate=s=>typeof s==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(s);
+const isTime=s=>typeof s==="string"&&/^\d{2}:\d{2}$/.test(s);
+const today=()=>ymd(new Date());
+const addDays=(s,n)=>{const d=parseD(s);d.setDate(d.getDate()+n);return ymd(d)};
+const mondayOf=s=>{const d=parseD(s);d.setDate(d.getDate()-((d.getDay()+6)%7));return ymd(d)};
+const WD=["周日","周一","周二","周三","周四","周五","周六"];
+/* dates shown as DD/MM/YYYY (SIM's preference); short form DD/MM */
+const fmtFull=s=>{if(!isDate(s))return "—";const d=parseD(s);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`};
+const fmtD=s=>{if(!isDate(s))return "—";return `${fmtFull(s)} ${WD[parseD(s).getDay()]}`};
+const fmtShort=s=>{if(!isDate(s))return "—";const d=parseD(s);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}`};
+const toMin=t=>{if(!isTime(t))return null;const [h,m]=t.split(":").map(Number);return h*60+m};
+const fromMin=m=>`${pad(Math.floor(m/60))}:${pad(m%60)}`;
+const daysBetween=(a,b)=>Math.round((parseD(b)-parseD(a))/864e5);
+const ageOf=dob=>{if(!isDate(dob))return null;const t=new Date(),d=parseD(dob);let a=t.getFullYear()-d.getFullYear();if(t.getMonth()<d.getMonth()||(t.getMonth()===d.getMonth()&&t.getDate()<d.getDate()))a--;return a};
+const rm=n=>"RM "+Math.round(Number(n)||0).toLocaleString("en-MY");
+const num=v=>{if(v===""||v==null)return null;const n=Number(String(v).replace(/[, ]/g,""));return isFinite(n)?n:NaN};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nowIso=()=>new Date().toISOString();
+const fmtDT=iso=>{if(!iso)return "—";const d=new Date(iso);if(isNaN(d))return "—";return `${fmtFull(ymd(d))} ${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const normName=s=>String(s||"").trim().replace(/\s+/g," ").toLowerCase();
+const phoneDigits=p=>{let d=String(p||"").replace(/\D/g,"");if(!d)return "";if(d.startsWith("0"))d="6"+d;return d};
+const monthOf=s=>isDate(s)?s.slice(0,7):"";
+
+/* ---------- state ---------- */
+const S={clients:[],meetings:[],activities:[],deals:[],drafts:[],runs:[],reports:[],summaries:{},settings:{},
+  view:"home",clientId:null,weekStart:mondayOf(today()),calDay:today(),calMode:"week",calA:false,
+  clientQ:"",clientP:"all",clientStage:"all",clientShowInactive:false,fuIncludeC:false,pipeShowC:false,meetQ:"",meetOpen:new Set(),
+  repMode:"week",repAnchor:today(),loaded:new Set(),dbState:"connecting"};
+let db=null,sample=null,downloads=null;
+try{const h=(location.hash||"").slice(1);if(VIEWS.some(v=>v[0]===h))S.view=h}catch(e){}
+
+const byId=(col,id)=>S[col].find(x=>x.id===id);
+const clientName=id=>{const c=byId("clients",id);return c?c.name:"（已删除的客户）"};
+const prioChip=p=>p?`<span class="chip p${esc(p)}">${esc(p)}</span>`:"";
+const stageChip=s=>`<span class="chip st">${esc(stageName(s))}</span>`;
+const rChip=k=>k?`<span class="chip rc">招聘 · ${esc(rstageName(k))}</span>`:"";
+const meetChip=m=>m.module==="recruit"?rChip(m.stage):stageChip(m.stage);
+const exChip=o=>o&&o.example?`<span class="chip ex">示例</span>`:"";
+function meetingsOf(cid){return S.meetings.filter(m=>m.clientId===cid).sort((a,b)=>(a.date+(a.start||"")).localeCompare(b.date+(b.start||"")))}
+
+/* ---------- db ---------- */
+const COLS=["clients","meetings","activities","deals","drafts","runs","reports","summaries"];
+/* browser-only store with the same calls the page uses (for the web version outside claude.ai): data stays in this device's localStorage */
+function localDb(){
+  const KEY="baoxian-zhuli-db-v1";let data={};
+  try{data=JSON.parse(localStorage.getItem(KEY)||"{}")||{}}catch(e){data={}}
+  const subs=new Set(),clone=v=>JSON.parse(JSON.stringify(v));
+  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){toast("浏览器储存空间不足，资料没有保存")}subs.forEach(f=>f())};
+  const snap=(id,v)=>({id,exists:v!==undefined,data:()=>v,metadata:{fromCache:false,hasPendingWrites:false}});
+  const newKey=()=>"l"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  const docRef=(col,id)=>({id,path:col+"/"+id,
+    get:async()=>snap(id,data[col]&&data[col][id]),
+    set:async v=>{(data[col]=data[col]||{})[id]=clone(v);save()},
+    update:async v=>{if(!data[col]||!data[col][id])throw{code:"invalid_argument"};Object.assign(data[col][id],clone(v));save()},
+    delete:async()=>{if(data[col])delete data[col][id];save()},
+    onSnapshot:next=>{const f=()=>next(snap(id,data[col]&&data[col][id]));subs.add(f);setTimeout(f,0);return()=>subs.delete(f)}});
+  const query=(col,ord,lim)=>({orderBy:(fld,dir)=>query(col,[fld,dir],lim),limit:n=>query(col,ord,n),doc:id=>docRef(col,id||newKey()),
+    onSnapshot:next=>{const f=()=>{let docs=Object.entries(data[col]||{}).map(([id,v])=>snap(id,v));
+      if(ord)docs.sort((a,b)=>{const x=a.data()[ord[0]],y=b.data()[ord[0]];return(x>y?1:x<y?-1:0)*(ord[1]==="desc"?-1:1)});
+      if(lim)docs=docs.slice(0,lim);next({docs,size:docs.length,empty:!docs.length})};subs.add(f);setTimeout(f,0);return()=>subs.delete(f)}});
+  window.addEventListener("storage",e=>{if(e.key===KEY){try{data=JSON.parse(e.newValue||"{}")||{}}catch(x){}subs.forEach(f=>f())}});
+  return{collection:c=>query(c),doc:p=>{const i=p.lastIndexOf("/");return docRef(p.slice(0,i),p.slice(i+1))}};
+}
+/* the web version can reach the internet, so it reads live weather itself every 30 minutes */
+const WCOORD={pangkor:[4.2167,100.5667],lumut:[4.2333,100.6333],sitiawan:[4.2167,100.7],ipoh:[4.5975,101.0901]};
+async function liveWeather(){
+  const k=WCOORD[S.settings.weatherLoc]?S.settings.weatherLoc:"pangkor",c=WCOORD[k];
+  try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c[0]}&longitude=${c[1]}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia/Kuala_Lumpur&forecast_days=1`);
+    const j=await r.json();if(!j.current||!j.daily)return;
+    S.weather={date:today(),at:nowIso(),loc:k,locName:WLOC[k],tempNow:j.current.temperature_2m,code:j.current.weather_code,tMax:j.daily.temperature_2m_max[0],tMin:j.daily.temperature_2m_min[0],rainProb:j.daily.precipitation_probability_max[0]};schedule()}catch(e){}
+}
+async function connect(){
+  const cl=window.claude;
+  if(cl&&cl.use){try{db=await cl.use("db")}catch(e){db=null}}
+  if(db)S.dbState="ok";else{db=localDb();S.dbState="local"}
+  for(const c of COLS){
+    let q=db.collection(c);
+    if(c==="runs"||c==="reports")q=q.orderBy("at","desc").limit(40);
+    q.onSnapshot(snap=>{
+      if(c==="summaries"){S.summaries=Object.fromEntries(snap.docs.map(d=>[d.id,d.data()]))}
+      else S[c]=snap.docs.map(d=>Object.assign({id:d.id},d.data()));
+      S.loaded.add(c);schedule();
+    },err=>{console.warn(c,err);toast("读取数据失败："+(err&&err.code||"未知错误"))});
+  }
+  if(S.dbState==="local"){
+    let lastLoc=null;
+    db.doc("settings/main").onSnapshot(s=>{S.settings=s.exists?s.data():{};if(S.settings.weatherLoc!==lastLoc){lastLoc=S.settings.weatherLoc;liveWeather()}schedule()});
+    setInterval(liveWeather,30*60000);return;
+  }
+  db.doc("settings/main").onSnapshot(s=>{S.settings=s.exists?s.data():{};schedule()},()=>{});
+  db.doc("weather/today").onSnapshot(s=>{S.weather=s.exists?s.data():null;schedule()},()=>{});
+  cl.use("sample").then(s=>{sample=s;schedule()}).catch(()=>{});
+  cl.use("downloads").then(d=>{downloads=d;schedule()}).catch(()=>{});
+}
+async function put(col,id,data){if(!db)throw{code:"no_db"};await db.collection(col).doc(id).set(data)}
+async function patch(col,id,data){if(!db)throw{code:"no_db"};await db.collection(col).doc(id).update(data)}
+async function del(col,id){if(!db)throw{code:"no_db"};await db.collection(col).doc(id).delete()}
+const newId=col=>db?db.collection(col).doc().id:("local"+Date.now());
+function dbErr(e){const c=e&&e.code;if(c==="no_db")return "未连接数据库，请在 claude.ai 中打开这个页面。";if(c==="quota_exceeded")return "数据库已满，请先清理旧记录。";if(c==="invalid_argument")return "你没有修改这份资料的权限。";return "保存失败，请再试一次。"}
+
+/* ---------- render loop ---------- */
+let pending=false;
+function schedule(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;render()})}
+function render(){
+  renderNav();
+  document.body.classList.toggle("fit",S.view==="calendar"&&!S.clientId);
+  const v=document.getElementById("view");
+  const keepScroll=v.querySelector(".cal-scroll")?.scrollTop;
+  const fn={home:vHome,calendar:vCalendar,clients:S.clientId?vClient:vClients,meetings:vMeetings,followups:vFollowups,pipeline:vPipeline,reports:vReports,agent:vAgent}[S.view];
+  let html=dbBanner()+fn();
+  v.innerHTML=html;
+  if(S.view==="calendar")mountCalendar(keepScroll);
+}
+function dbBanner(){
+  if(S.dbState==="local")return S.view==="home"?`<div class="banner info">网页版：资料只保存在这部设备的浏览器里，不会同步到其他设备，也不会上传到网上。AI 摘要、WhatsApp 草稿和每日助理只在 claude.ai 版本可用。请定期到「每日助理 → 设置」下载备份。</div>`:"";
+  if(S.dbState==="connecting"||S.loaded.size<COLS.length)return `<div class="banner info">正在读取你的资料…</div>`;
+  return "";
+}
+function renderNav(){
+  const fu=followups();const due=fu.overdue.length+fu.today.length;
+  const drafts=S.drafts.filter(d=>d.status==="pending").length;
+  document.getElementById("nav").innerHTML=`<div class="brand">${MARK}<span>保险助理</span></div><div class="brand-sub">客户 · 日程 · 跟进 · 业绩</div>`+
+    VIEWS.map(([k,l])=>{const b=k==="followups"&&due?due:k==="agent"&&drafts?drafts:0;
+      return `<button class="nav-btn" data-act="go" data-v="${k}" ${S.view===k?'aria-current="page"':""}><span class="nav-l">${ic(k)}<span>${l}</span></span>${b?`<span class="nav-badge num">${b}</span>`:""}</button>`}).join("");
+}
+
+/* ---------- derived data ---------- */
+function followups(includeC){
+  const t=today(),wk=addDays(t,7),inc=includeC??S.fuIncludeC;
+  const act=S.clients.filter(c=>c.status!=="inactive"&&(inc||c.priority!=="C"));
+  const pr={A:0,B:1,C:2};
+  const srt=(a,b)=>((pr[a.priority]??3)-(pr[b.priority]??3))||String(a.nextFollowUp||"9").localeCompare(String(b.nextFollowUp||"9"));
+  return{
+    overdue:act.filter(c=>isDate(c.nextFollowUp)&&c.nextFollowUp<t).sort(srt),
+    today:act.filter(c=>c.nextFollowUp===t).sort(srt),
+    week:act.filter(c=>isDate(c.nextFollowUp)&&c.nextFollowUp>t&&c.nextFollowUp<=wk).sort(srt),
+    nodate:act.filter(c=>!isDate(c.nextFollowUp)).sort(srt),
+    proposal:act.filter(c=>c.waitingOn==="proposal").sort(srt),
+    docsuw:act.filter(c=>c.waitingOn==="docs"||c.waitingOn==="uw").sort(srt),
+    hot:act.filter(c=>c.priority==="A").sort(srt)
+  };
+}
+function fuStatus(c){const t=today();if(!isDate(c.nextFollowUp))return `<span class="chip warn">未设定日期</span>`;if(c.nextFollowUp<t)return `<span class="chip bad">逾期 ${daysBetween(c.nextFollowUp,t)} 天</span>`;if(c.nextFollowUp===t)return `<span class="chip warn">今天</span>`;return `<span class="chip">${fmtShort(c.nextFollowUp)}</span>`}
+function actsOn(date){return S.activities.filter(a=>a.date===date).sort((a,b)=>(a.start||"").localeCompare(b.start||""))}
+function birthdaysSoon(n=7){
+  const t=today(),out=[];
+  for(const c of S.clients){if(!isDate(c.dob))continue;for(let i=0;i<=n;i++){const d=addDays(t,i);if(d.slice(5)===c.dob.slice(5)){out.push({c,d,i});break}}}
+  return out.sort((a,b)=>a.i-b.i);
+}
+function openDealsOf(cid){return S.deals.filter(d=>d.clientId===cid&&OPEN_DEAL.includes(d.status))}
+function mbdBasis(){return S.settings.mbdBasis==="submitted"?"submitted":"inforce"}
+
+/* ---------- illustration: Pangkor island, sun, sea, boat ---------- */
+const ISLAND=`<svg viewBox="0 0 240 120" aria-hidden="true">
+  <circle cx="186" cy="34" r="17" fill="var(--sun)"/>
+  <path d="M58 94 Q112 50 176 94 Z" fill="var(--hill)"/>
+  <path d="M116 80 Q117 64 124 50" stroke="var(--trunk)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M124 50 q-15 -7 -26 4 q12 -3 26 -4z M124 50 q15 -8 27 2 q-13 -3 -27 -2z M124 50 q-3 -15 -16 -18 q8 8 16 18z M124 50 q9 -12 22 -12 q-12 4 -22 12z" fill="var(--leaf)"/>
+  <rect x="0" y="92" width="240" height="28" rx="4" fill="var(--sea)"/>
+  <path d="M6 102 q8 -4 16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0" stroke="var(--sea-line)" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M30 112 q8 -4 16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0" stroke="var(--sea-line)" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".6"/>
+  <path d="M188 92 h30 l-6 8 h-18z" fill="var(--accent)"/>
+  <path d="M203 92 v-20 l12 18z" fill="#ffffff" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>`;
+/* brand mark: minimal app-style tile, gradient sea-to-navy with a white shield, check and sparkle */
+const MARK=`<svg viewBox="0 0 40 40" aria-hidden="true">
+  <defs><linearGradient id="mkg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3cc4b4"/><stop offset="1" stop-color="#1e5a7d"/></linearGradient></defs>
+  <rect width="40" height="40" rx="11" fill="url(#mkg)"/>
+  <path d="M20 8.5l9 3.4v6.6c0 6-3.8 10.6-9 12.9-5.2-2.3-9-6.9-9-12.9v-6.6z" fill="#ffffff" fill-opacity=".18" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M15.6 19.6l3.2 3.2 5.8-6.2" stroke="#ffffff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M31 5.5l.9 2.3 2.3.9-2.3.9-.9 2.3-.9-2.3-2.3-.9 2.3-.9z" fill="#f6c86b"/>
+</svg>`;
+
+/* line icons in soft tinted tiles: one colour per section, used in the side menu, page titles and panel headings */
+const SVG=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const ICONS={
+  home:SVG('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>'),
+  calendar:SVG('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="8.5" cy="14.5" r="1"/><circle cx="12" cy="14.5" r="1"/><circle cx="15.5" cy="14.5" r="1"/>'),
+  clients:SVG('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.7-3.6 3.4-5.5 6.5-5.5s5.8 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14.5c2.3 0 4 1.5 4.5 4"/>'),
+  meetings:SVG('<path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4M8.5 12h7M8.5 16h5"/>'),
+  followups:SVG('<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>'),
+  pipeline:SVG('<path d="M3 4h18l-7 8v6l-4 2v-8z"/>'),
+  reports:SVG('<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>'),
+  agent:SVG('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>'),
+  star:SVG('<path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>'),
+  alarm:SVG('<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 2M4 4.5l2.5-2M20 4.5l-2.5-2"/>'),
+  cake:SVG('<path d="M4 21v-7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7M3 21h18M4 16c1.5 1.2 3 1.2 4 0s2.5-1.2 4 0 3 1.2 4 0 2.5-1.2 4 0M12 12V8M12 5.5c.8-.8.8-1.7 0-2.5-.8.8-.8 1.7 0 2.5z"/>')
+};
+const TINT={home:["#fdf1d6","#b7791f"],calendar:["var(--c-work-bg)","var(--c-work)"],clients:["var(--c-client-bg)","var(--c-client)"],meetings:["var(--accent-soft)","var(--accent)"],
+  followups:["var(--warn-bg)","var(--warn)"],pipeline:["#efe9f8","#7b5fb0"],reports:["var(--ok-bg)","var(--ok)"],agent:["#e3f2f5","#2b7f90"],
+  star:["var(--pA-bg)","var(--pA)"],alarm:["var(--bad-bg)","var(--bad)"],cake:["#fbe6ee","#c2527a"]};
+const ic=(name,lg)=>{const [bg,fg]=TINT[name]||TINT.meetings;return `<span class="ic${lg?" lg":""}" style="background:${bg};color:${fg}">${ICONS[name]}</span>`};
+/* today card: live local time + date; weather is written once a morning by the daily assistant (the page itself cannot reach the internet) */
+const WLOC={pangkor:"邦咯岛 Pangkor",lumut:"红土坎 Lumut",sitiawan:"实兆远 Sitiawan",ipoh:"怡保 Ipoh"};
+const WX_SVG={
+  sun:`<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="9" fill="var(--sun)"/><g stroke="var(--sun)" stroke-width="3" stroke-linecap="round"><path d="M24 5v5M24 38v5M5 24h5M38 24h5M10.6 10.6l3.5 3.5M33.9 33.9l3.5 3.5M10.6 37.4l3.5-3.5M33.9 14.1l3.5-3.5"/></g></svg>`,
+  partly:`<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="18" cy="17" r="8" fill="var(--sun)"/><path d="M15 38h20a8 8 0 0 0 0-16 11 11 0 0 0-20.5 3A6.5 6.5 0 0 0 15 38z" fill="#ffffff" stroke="#c9dde3" stroke-width="2"/></svg>`,
+  cloud:`<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M13 37h22a9 9 0 0 0 0-18 12 12 0 0 0-22.5 3.5A7.3 7.3 0 0 0 13 37z" fill="#e8f0f2" stroke="#a9c2c9" stroke-width="2"/></svg>`,
+  rain:`<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M13 30h22a8.5 8.5 0 0 0 0-17 11.5 11.5 0 0 0-21.5 3.3A7 7 0 0 0 13 30z" fill="#e8f0f2" stroke="#a9c2c9" stroke-width="2"/><g stroke="var(--c-work)" stroke-width="2.6" stroke-linecap="round"><path d="M17 35l-2 5M25 35l-2 5M33 35l-2 5"/></g></svg>`,
+  storm:`<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M13 29h22a8.5 8.5 0 0 0 0-17 11.5 11.5 0 0 0-21.5 3.3A7 7 0 0 0 13 29z" fill="#dde6ea" stroke="#94adb5" stroke-width="2"/><path d="M25 30l-5 8h5l-3 7 8-10h-5l3-5z" fill="var(--sun)"/></svg>`,
+  fog:`<svg viewBox="0 0 48 48" aria-hidden="true"><g stroke="#a9c2c9" stroke-width="3" stroke-linecap="round"><path d="M8 18h32M5 25h38M10 32h28"/></g></svg>`
+};
+const wxOf=code=>{const c=Number(code);if(c===0)return["sun","晴天"];if(c<=2)return["partly","晴时多云"];if(c===3)return["cloud","阴天"];if(c===45||c===48)return["fog","有雾"];
+  if(c>=95)return["storm","雷雨"];if(c>=80)return["rain","阵雨"];if(c>=51)return["rain","下雨"];return["cloud","多云"]};
+const t12=d=>`${d.getHours()%12||12}:${pad(d.getMinutes())} ${d.getHours()<12?"AM":"PM"}`;
+const clockNow=()=>t12(new Date());
+function weatherCard(){
+  const t=today(),w=S.weather,loc=WLOC[S.settings.weatherLoc]||WLOC.pangkor;
+  const fresh=w&&w.date===t;const [ico,desc]=fresh?wxOf(w.code):["cloud",""];
+  return `<div class="wx" aria-label="今日天气">
+    <div class="wx-top"><span class="wx-loc">${esc(fresh&&w.locName?w.locName:loc)}</span><span class="wx-time num" id="wxTime">${clockNow()}</span></div>
+    <div class="wx-date num" id="wxDate">${fmtD(t)}</div>
+    ${fresh?`<div class="wx-main">${WX_SVG[ico]}<div><div class="wx-temp num">${Math.round(w.tempNow??w.tMax)}°C</div><div class="wx-desc">${desc}</div></div></div>
+      <div class="wx-meta num">最高 ${Math.round(w.tMax)}° · 最低 ${Math.round(w.tMin)}°${w.rainProb!=null?` · 降雨机会 ${w.rainProb}%`:""}</div>
+      <div class="wx-src">气温是 ${t12(new Date(w.at))} 的实测 · Open-Meteo</div>`
+    :`<div class="wx-main">${WX_SVG.cloud}<div class="wx-desc" style="font-size:13px">${S.dbState==="local"?"正在读取天气…":"今天的天气会在早上 7:30 助理运行后显示"}</div></div>`}
+  </div>`;
+}
+setInterval(()=>{const a=document.getElementById("wxTime");if(a)a.textContent=clockNow();const b=document.getElementById("wxDate");if(b)b.textContent=fmtD(today())},20000);
+const IC_PERSON=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9.5" cy="8" r="4"/><path d="M2.5 20.5c.8-4 3.7-6 7-6s6.2 2 7 6"/><path d="M19 7.5v6M16 10.5h6"/></svg>`;
+const IC_CAL=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M12 13.5v5M9.5 16h5"/></svg>`;
+const IC_NOTE=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v4h4M8.5 12h7M8.5 16h5"/></svg>`;
+const BTN_CLIENT=`<button class="btn big teal" data-act="newClient">${IC_PERSON}新客户</button>`;
+const BTN_ACT=`<button class="btn big blue" data-act="newActivity">${IC_CAL}新活动</button>`;
+
+/* ---------- views: home ---------- */
+function vHome(){
+  const t=today(),fu=followups(),acts=actsOn(t);
+  const drafts=S.drafts.filter(d=>d.status==="pending");
+  const mStart=t.slice(0,7)+"-01",mEnd=addDays(addDays(mStart,32).slice(0,7)+"-01",-1);
+  const m=metrics(mStart,mEnd);
+  const bd=birthdaysSoon(7);
+  const isEmpty=!S.clients.length;
+  return `<div class="hero"><div class="hero-txt"><div class="sub">${fmtD(t)}</div><h1>今天先做什么</h1>
+    <div class="row" style="gap:10px">${BTN_CLIENT}${BTN_ACT}<button class="btn big navy" data-act="newMeeting">${IC_NOTE}记录会面</button></div></div>${weatherCard()}</div>
+  ${isEmpty?`<div class="panel"><h2>还没有客户</h2><p class="sub" style="margin:0">点「＋ 新客户」加入第一位客户，或在会面后直接点右下角「＋ 记录会面」，系统会同时建立客户资料。</p></div>`:""}
+  ${drafts.length?`<div class="banner info">有 ${drafts.length} 条 WhatsApp 跟进草稿等你批准。 <button class="btn sm" data-act="go" data-v="agent">去查看</button></div>`:""}
+  <div class="grid">
+    <section class="panel"><div class="panel-h"><h2 class="ttl">${ic("calendar")}今天的行程</h2><button class="btn sm ghost" data-act="go" data-v="calendar">打开成功宝典</button></div>
+      <div class="list">${acts.length?acts.map(actRow).join(""):`<div class="empty">今天没有安排。</div>`}</div></section>
+    <section class="panel"><div class="panel-h"><h2 class="ttl">${ic("alarm")}逾期 / 今天要跟进</h2><span class="sub num">${fu.overdue.length+fu.today.length} 位</span></div>
+      <div class="list">${[...fu.overdue,...fu.today].slice(0,8).map(fuRow).join("")||`<div class="empty">没有逾期或今天到期的跟进。</div>`}</div>
+      ${fu.overdue.length+fu.today.length>8?`<button class="btn sm" data-act="go" data-v="followups">查看全部</button>`:""}</section>
+    <section class="panel"><div class="panel-h"><h2 class="ttl">${ic("star")}A 级客户</h2><span class="sub num">${fu.hot.length} 位</span></div>
+      <div class="list">${fu.hot.slice(0,8).map(c=>`<div class="item clickable" data-act="openClient" data-id="${c.id}"><div class="grow"><div class="t">${esc(c.name)} ${exChip(c)}</div><div class="m">${esc(c.nextAction||"未写下一步行动")}</div></div>${stageChip(c.stage)}${fuStatus(c)}</div>`).join("")||`<div class="empty">还没有 A 级客户。</div>`}</div></section>
+    <section class="panel"><div class="panel-h"><h2 class="ttl">${ic("reports")}本月业绩</h2><button class="btn sm ghost" data-act="go" data-v="reports">完整报告</button></div>
+      <div class="stats">
+        <div class="stat"><span>客户会面</span><b class="num">${m.meetings}</b></div>
+        <div class="stat"><span>已提交申请</span><b class="num">${m.submitted}</b></div>
+        <div class="stat"><span>已生效保单</span><b class="num">${m.inforce}</b></div>
+        <div class="stat"><span>MBD</span><b class="num">${rm(m.mbd)}</b><small>${mbdBasis()==="inforce"?"只计已生效":"按提交日计"}</small></div>
+        <div class="stat"><span>保费</span><b class="num">${rm(m.premium)}</b></div>
+      </div></section>
+    ${bd.length?`<section class="panel"><h2 class="ttl">${ic("cake")}7 天内生日</h2><div class="list">${bd.map(({c,d,i})=>`<div class="item clickable" data-act="openClient" data-id="${c.id}"><div class="grow"><div class="t">${esc(c.name)}</div><div class="m">${fmtD(d)}${i===0?"（今天）":""}</div></div>${prioChip(c.priority)}</div>`).join("")}</div></section>`:""}
+  </div>`;
+}
+function actRow(a){
+  const cn=a.clientId?` · ${esc(clientName(a.clientId))}`:"";
+  return `<div class="item clickable" data-act="editActivity" data-id="${a.id}"><span class="dot ${esc(a.cat)}"></span><div class="grow"><div class="t">${esc(a.title)}</div><div class="m num">${esc(a.start||"")}–${esc(a.end||"")}${cn}${a.location?" · "+esc(a.location):""}</div></div>${a.status&&a.status!=="planned"?`<span class="chip ${a.status==="done"?"ok":a.status==="cancelled"?"bad":"warn"}">${ACT_ST[a.status]}</span>`:""}</div>`;
+}
+function fuRow(c){
+  const reason=c.waitingOn&&c.waitingOn!=="none"?WAITING[c.waitingOn]:"";
+  return `<div class="item"><div class="grow clickable" data-act="openClient" data-id="${c.id}"><div class="t">${esc(c.name)} ${prioChip(c.priority)} ${exChip(c)}</div><div class="m">${stageName(c.stage)} · ${esc(c.nextAction||reason||"未写下一步行动")}</div></div>${fuStatus(c)}</div>`;
+}
+
+/* ---------- views: calendar ---------- */
+function vCalendar(){
+  const days=S.calMode==="week"?[...Array(7)].map((_,i)=>addDays(S.weekStart,i)):[S.calDay];
+  const label=S.calMode==="week"?`${fmtFull(days[0])} – ${fmtFull(days[6])}`:fmtD(S.calDay);
+  const t=today();
+  let gut="";for(let h=7;h<23;h++)gut+=`<span style="top:${(h-7)/16*100}%">${pad(h)}:00</span>`;
+  const cols=days.map(d=>{
+    let evs=actsOn(d).filter(a=>toMin(a.start)!=null);
+    if(S.calA)evs=evs.filter(a=>a.cat==="client"&&byId("clients",a.clientId)?.priority==="A");
+    const laid=layout(evs);
+    const nowM=(()=>{const n=new Date();return n.getHours()*60+n.getMinutes()})();
+    const nowLine=d===t&&nowM>=420&&nowM<=1380?`<div class="now-line" style="top:${(nowM-420)/9.6}%"></div>`:"";
+    return `<div class="cal-col${d===t?" today":""}" data-date="${d}">${nowLine}${laid.map(({a,lane,lanes})=>{
+      const s=Math.max(toMin(a.start),420),e=Math.min(Math.max(toMin(a.end)||s+30,s+20),1380);
+      const cn=a.clientId?esc(clientName(a.clientId)):"";
+      return `<div class="ev ${esc(a.cat)} ${a.status==="cancelled"?"cancelled":""} ${a.status==="done"?"done":""}" data-act="editActivity" data-id="${a.id}" title="${esc(a.title)}"
+        style="top:${(s-420)/9.6}%;height:calc(${(e-s)/9.6}% - 2px);left:calc(${lane/lanes*100}% + 2px);width:calc(${100/lanes}% - 4px);right:auto">
+        <b>${esc(a.title)}</b><i class="num">${esc(a.start)}–${esc(a.end||"")}</i>${cn&&a.title.indexOf(cn)<0?`<br><i>${cn}</i>`:""}</div>`}).join("")}</div>`;
+  }).join("");
+  const heads=days.map(d=>{const dd=parseD(d);return `<div class="cal-dh${d===t?" today":""}" data-act="calDay" data-d="${d}">${WD[dd.getDay()]}<b class="num">${fmtShort(d)}</b></div>`}).join("");
+  const unscheduled=S.activities.filter(a=>days.includes(a.date)&&toMin(a.start)==null);
+  return `<div class="cal-page"><div class="cal-top"><h1 class="ttl">${ic("calendar")}${label}</h1>
+    <div class="row">
+      <div class="seg"><button data-act="calMode" data-m="week" aria-pressed="${S.calMode==="week"}">周</button><button data-act="calMode" data-m="day" aria-pressed="${S.calMode==="day"}">日</button></div>
+      <button class="btn sm" data-act="calNav" data-n="-1" aria-label="上一段">‹</button><button class="btn sm" data-act="calNav" data-n="0">今天</button><button class="btn sm" data-act="calNav" data-n="1" aria-label="下一段">›</button>
+      <button class="btn mid primary" data-act="newActivity">${IC_CAL}新活动</button>
+      <label class="row sub" style="font-size:12px;gap:4px"><input type="checkbox" id="calA" ${S.calA?"checked":""}> 只看 A 级</label>
+      <div class="legend cal-legend"><span><i class="dot client"></i>客户</span><span><i class="dot work"></i>会议/培训</span><span><i class="dot personal"></i>个人</span></div></div></div>
+  ${unscheduled.length?`<div class="banner">有 ${unscheduled.length} 个活动没有时间，所以不在日历格子里：${unscheduled.map(a=>`<a href="#" data-act="editActivity" data-id="${a.id}">${esc(a.title)}</a>`).join("、")}</div>`:""}
+  <div class="cal-scroll"><div class="cal" style="--cols:${days.length}">
+    <div class="cal-dh" style="cursor:default"></div>${heads}
+    <div class="cal-gut">${gut}</div>${cols}
+  </div></div>
+  ${weekLine(mondayOf(S.calMode==="week"?S.weekStart:S.calDay))}</div>`;
+}
+const STAGE_COLOR={prospect:"var(--s-prospect)",open:"var(--s-open)",present:"var(--s-present)",followup:"var(--s-followup)",closing:"var(--s-closing)"};
+/* week line chart under the calendar: one point per day (Mon–Sun); stage counts and policies as lines on the left axis, daily ANP as pale bars on the right axis */
+function weekLine(ws){
+  const days=[...Array(7)].map((_,i)=>addDays(ws,i)),we=days[6];
+  const per=days.map(d=>{const ms=S.meetings.filter(m=>m.date===d),c=closedIn(d,d);const o={pol:c.n,anp:c.anp};STAGES.forEach(s=>o[s[0]]=ms.filter(m=>m.stage===s[0]).length);return o});
+  const wk=metrics(ws,we),wc=closedIn(ws,we);
+  const series=[...STAGES.map(([k,zh,en])=>({k,label:en,zh,color:STAGE_COLOR[k],dash:""})),{k:"pol",label:"成交保单",zh:"成交保单",color:"var(--ink)",dash:"5 4"}];
+  const W=900,H=130,pl=28,pr=62,pt=10,pb=22;
+  const maxC=Math.max(3,...per.flatMap(p=>series.map(s=>p[s.k]))),maxA=Math.max(1000,...per.map(p=>p.anp));
+  const x=i=>pl+(W-pl-pr)*(i+.5)/7,y=v=>pt+(H-pt-pb)*(1-v/maxC),ya=v=>pt+(H-pt-pb)*(1-v/maxA);
+  const k=v=>v>=1000?(Math.round(v/100)/10)+"k":String(Math.round(v));
+  const bw=(W-pl-pr)/7*.5,t=today();
+  const grid=[0,Math.round(maxC/2),maxC].map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${pl-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`).join("")
+    +[maxA/2,maxA].map(v=>`<text x="${W-pr+6}" y="${ya(v)+4}" fill="var(--ok)">RM ${k(v)}</text>`).join("");
+  const bars=per.map((p,i)=>p.anp?`<rect x="${x(i)-bw/2}" y="${ya(p.anp)}" width="${bw}" height="${H-pb-ya(p.anp)}" rx="3" fill="var(--ok-bg)"><title>${fmtD(days[i])} ANP ${rm(p.anp)}</title></rect>`:"").join("");
+  const lines=series.map(s=>`<polyline points="${per.map((p,i)=>x(i)+","+y(p[s.k])).join(" ")}" fill="none" stroke="${s.color}" stroke-width="2" stroke-dasharray="${s.dash}" stroke-linejoin="round"/>`+
+    per.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p[s.k])}" r="${p[s.k]?3.5:2}" fill="${p[s.k]?s.color:"var(--surface)"}" stroke="${s.color}" stroke-width="1.5"><title>${fmtD(days[i])} ${s.zh}：${p[s.k]}</title></circle>`).join("")).join("");
+  const xl=days.map((d,i)=>`<text x="${x(i)}" y="${H-6}" text-anchor="middle" font-weight="${d===t?700:400}">${WD[parseD(d).getDay()]} ${fmtShort(d)}</text>`).join("");
+  const lg=s=>`<span><i class="sw" style="background:${s.color}"></i>${s.label} <b>${s.k==="pol"?wc.n+" 张":wk.byStage[s.k]}</b></span>`;
+  return `<div class="wline"><div class="lg"><span class="sub">这周合计</span>${series.map(lg).join("")}
+      <span title="已确认的用确认保费，未确认的用预估年缴保费"><i class="sw" style="background:var(--ok-bg);border:1px solid var(--ok)"></i>NB（ANP）<b>${rm(wc.anp)}</b>${wc.est?`（含预估 ${wc.est} 张）`:""}</span></div>
+    <div class="lg"><span class="sub">招聘合计</span>${RSTAGES.map(([k,zh,en])=>`<span title="${zh}"><i class="sw" style="background:${RSTAGE_COLOR[k]}"></i>${en} <b>${wk.byR[k]}</b></span>`).join("")}</div>
+    <svg class="bar-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="这周每天的 Open、Present、Follow-up、Closing、成交保单和 ANP">${grid}${bars}${lines}${xl}</svg></div>`;
+}
+function weeklyChartsPanel(ws){
+  const weeks=[...Array(8)].map((_,i)=>{const s=addDays(ws,-7*(7-i)),e=addDays(s,6);return{ws:s,by:metrics(s,e).byStage,closed:closedIn(s,e)}});
+  return `<section class="panel"><div class="panel-h"><h2>每周销售活动与成交</h2><span class="sub">近 8 周</span></div>${stageChart(weeks,ws)}${anpChart(weeks,ws)}
+    <div class="hint">成交保单 = 当周提交申请的保单（不含拒保或取消）。ANP 已确认的用确认保费，未确认的用预估年缴保费。</div></section>`;
+}
+function closedIn(s,e){
+  const ds=S.deals.filter(d=>inR(d.submitDate,s,e)&&!["agreed","declined","ntu"].includes(d.status));
+  let anp=0,est=0;for(const d of ds){const p=d.premium!=null&&d.premium!==""?Number(d.premium):null;if(p!=null)anp+=p;else{anp+=Number(d.estPremium)||0;est++}}
+  return{n:ds.reduce((x,d)=>x+(Number(d.policies)||1),0),anp,est};
+}
+function anpChart(weeks,cur){
+  const W=640,H=180,pl=56,pb=26,pt=18,max=Math.max(1000,...weeks.map(w=>w.closed.anp));
+  const y=v=>pt+(H-pt-pb)*(1-v/max),bw=(W-pl)/weeks.length,ticks=[0,max/2,max];
+  const k=v=>v>=1000?(Math.round(v/100)/10)+"k":String(Math.round(v));
+  return `<h3 style="margin-top:6px">每周成交保单与 ANP</h3>
+  <div class="tbl-wrap"><svg class="bar-chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="近 8 周每周 ANP 与成交保单数">
+    ${ticks.map(t=>`<line x1="${pl}" x2="${W}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${pl-6}" y="${y(t)+4}" text-anchor="end">RM ${k(t)}</text>`).join("")}
+    ${weeks.map((w,i)=>{const x=pl+i*bw+bw*.2,wd=bw*.6,isCur=w.ws===cur,a=w.closed.anp;
+      return `<rect x="${x}" y="${y(a)}" width="${wd}" height="${Math.max(H-pb-y(a),0)}" rx="3" fill="var(--s-closing)"><title>${fmtShort(w.ws)} 当周：${w.closed.n} 张保单，ANP ${rm(a)}</title></rect>`+
+        (w.closed.n?`<text x="${x+wd/2}" y="${y(a)-4}" text-anchor="middle" font-weight="${isCur?700:400}">${w.closed.n}张 · ${k(a)}</text>`:"")+
+        `<text x="${x+wd/2}" y="${H-8}" text-anchor="middle" font-weight="${isCur?700:400}">${isCur?"这周":fmtShort(w.ws)}</text>`}).join("")}
+  </svg></div>`;
+}
+function stageChart(weeks,cur){
+  const W=640,H=210,pl=30,pb=26,pt=16;
+  const tot=w=>STAGES.reduce((x,s)=>x+w.by[s[0]],0);
+  const max=Math.max(4,...weeks.map(tot));const y=v=>pt+(H-pt-pb)*(1-v/max);
+  const bw=(W-pl)/weeks.length,ticks=[0,Math.round(max/2),max];
+  const bars=weeks.map((w,i)=>{const x=pl+i*bw+bw*.2,wd=bw*.6;let acc=0;
+    const segs=STAGES.map(([k,zh])=>{const v=w.by[k];if(!v)return "";const y1=y(acc+v),h=y(acc)-y1;acc+=v;
+      return `<rect x="${x}" y="${y1}" width="${wd}" height="${Math.max(h-1,1)}" fill="${STAGE_COLOR[k]}"><title>${fmtShort(w.ws)} 当周 ${zh}：${v}</title></rect>`}).join("");
+    const t=tot(w),isCur=w.ws===cur;
+    return segs+(t?`<text x="${x+wd/2}" y="${y(t)-4}" text-anchor="middle" font-weight="${isCur?700:400}">${t}</text>`:"")+
+      `<text x="${x+wd/2}" y="${H-8}" text-anchor="middle" font-weight="${isCur?700:400}">${isCur?"这周":fmtShort(w.ws)}</text>`}).join("");
+  return `<div class="legend">${STAGES.map(([k,zh,en])=>`<span><i class="sw" style="background:${STAGE_COLOR[k]}"></i>${zh} ${en}</span>`).join("")}</div>
+  <div class="tbl-wrap"><svg class="bar-chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="近 8 周每周各阶段会面次数">
+    ${ticks.map(t=>`<line x1="${pl}" x2="${W}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${pl-6}" y="${y(t)+4}" text-anchor="end">${t}</text>`).join("")}${bars}
+  </svg></div><div class="hint">近 8 周，每根柱代表一周（从周一开始），颜色是会面时的销售阶段，柱顶数字是当周会面总数。</div>`;
+}
+function layout(evs){
+  const items=evs.map(a=>({a,s:toMin(a.start),e:Math.max(toMin(a.end)||toMin(a.start)+30,toMin(a.start)+20)})).sort((x,y)=>x.s-y.s||y.e-x.e);
+  const out=[];let cluster=[],cEnd=-1;
+  const flush=()=>{const lanesEnd=[];for(const it of cluster){let l=lanesEnd.findIndex(e=>e<=it.s);if(l<0){l=lanesEnd.length;lanesEnd.push(0)}lanesEnd[l]=it.e;it.lane=l}for(const it of cluster)out.push({a:it.a,lane:it.lane,lanes:lanesEnd.length});cluster=[]};
+  for(const it of items){if(it.s>=cEnd&&cluster.length)flush();cluster.push(it);cEnd=Math.max(cEnd,it.e)}
+  if(cluster.length)flush();return out;
+}
+function mountCalendar(keepScroll){
+  document.querySelectorAll(".cal-col").forEach(col=>col.addEventListener("click",e=>{
+    if(e.target!==col)return;
+    const r=col.getBoundingClientRect(),hour=r.height/16;
+    let m=420+Math.floor((e.clientY-r.top)/hour*2)*30;m=Math.min(Math.max(m,420),1350);
+    activityForm(null,{date:col.dataset.date,start:fromMin(m),end:fromMin(Math.min(m+60,1380))});
+  }));
+  const cb=document.getElementById("calA");if(cb)cb.onchange=()=>{S.calA=cb.checked;render()};
+}
+
+/* ---------- views: clients ---------- */
+function vClients(){
+  const q=normName(S.clientQ);
+  let list=S.clients.filter(c=>(S.clientShowInactive||c.status!=="inactive"));
+  if(q)list=list.filter(c=>normName(c.name).includes(q)||String(c.phone||"").includes(q));
+  if(S.clientP!=="all")list=list.filter(c=>c.priority===S.clientP);
+  if(S.clientStage!=="all")list=list.filter(c=>c.stage===S.clientStage);
+  const pr={A:0,B:1,C:2};
+  list.sort((a,b)=>((pr[a.priority]??3)-(pr[b.priority]??3))||a.name.localeCompare(b.name,"zh"));
+  const t=today();
+  return `<div class="head"><div><div class="sub">${S.clients.length} 位客户</div><h1 class="ttl">${ic("clients",1)}客户</h1></div>${BTN_CLIENT}</div>
+  <div class="panel">
+    <div class="row"><input type="search" id="clientQ" placeholder="搜索姓名或电话" value="${esc(S.clientQ)}" style="max-width:260px">
+      <div class="seg">${["all","A","B","C"].map(p=>`<button data-act="clientP" data-p="${p}" aria-pressed="${S.clientP===p}">${p==="all"?"全部":p}</button>`).join("")}</div>
+      <select id="clientStage" style="width:auto"><option value="all">全部阶段</option>${STAGES.map(s=>`<option value="${s[0]}" ${S.clientStage===s[0]?"selected":""}>${s[1]}</option>`).join("")}</select>
+      <label class="row sub"><input type="checkbox" id="clientInactive" ${S.clientShowInactive?"checked":""}> 显示已停用</label></div>
+    <div class="tbl-wrap"><table><thead><tr><th>姓名</th><th>优先级</th><th>阶段</th><th>下次跟进</th><th>下一步</th><th>最近联系</th></tr></thead><tbody>
+    ${list.map(c=>`<tr class="clickable ${c.priority==="A"?"hot":""}" data-act="openClient" data-id="${c.id}"><td>${esc(c.name)} ${exChip(c)}${c.status==="inactive"?' <span class="chip">已停用</span>':""}</td><td>${prioChip(c.priority)}</td><td>${STAGE_IDX[c.stage]!=null?stageChip(c.stage):""}${rChip(c.rstage)}</td>
+      <td>${c.status==="inactive"?"—":fuStatus(c)}</td><td>${esc(c.nextAction||"")}</td><td class="num">${fmtShort(c.lastContact)}</td></tr>`).join("")||`<tr><td colspan="6" class="empty">没有符合条件的客户。</td></tr>`}
+    </tbody></table></div></div>`;
+}
+function vClient(){
+  const c=byId("clients",S.clientId);
+  if(!c)return `<button class="btn" data-act="backClients">‹ 返回客户列表</button><div class="empty">找不到这位客户，可能已被删除。</div>`;
+  const ms=meetingsOf(c.id),deals=S.deals.filter(d=>d.clientId===c.id),t=today();
+  const upcoming=S.activities.filter(a=>a.clientId===c.id&&a.date>=t&&a.status!=="cancelled").sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+  const age=ageOf(c.dob);
+  const f=(k,v)=>`<div><dt>${k}</dt><dd>${v==null||v===""?'<span class="sub">—</span>':v}</dd></div>`;
+  const sum=S.summaries[c.id];
+  return `<button class="btn ghost" data-act="backClients" style="align-self:flex-start">‹ 客户列表</button>
+  <div class="head"><div><div class="row">${prioChip(c.priority)}${STAGE_IDX[c.stage]!=null?stageChip(c.stage):""}${rChip(c.rstage)}${c.status==="inactive"?'<span class="chip">已停用</span>':""}${exChip(c)}</div><h1>${esc(c.name)}</h1>
+    <div class="sub">${c.phone?esc(c.phone)+" · ":""}${age!=null?age+" 岁 · ":""}${esc(c.occupation||"")}</div></div>
+    <div class="row"><button class="btn primary" data-act="newMeeting" data-cid="${c.id}">＋ 记录会面</button><button class="btn" data-act="newActivity" data-cid="${c.id}">＋ 约见</button><button class="btn" data-act="newDeal" data-cid="${c.id}">＋ 保单</button><button class="btn" data-act="draftOne" data-id="${c.id}">WhatsApp 草稿</button><button class="btn" data-act="editClient" data-id="${c.id}">编辑资料</button></div></div>
+  <section class="panel"><div class="panel-h"><h2 class="ttl">${ic("agent")}AI 客户摘要与下一步建议</h2>
+    <button class="btn sm" data-act="aiSummary" data-id="${c.id}" ${sample?"":"disabled"}>${sum?"重新生成":"生成摘要"}</button></div>
+    <div id="ai-out">${sum?renderSummary(c,sum):`<div class="empty">${sample?"根据已记录的会面内容生成摘要。AI 只会用你记录的资料，不会编造。":"AI 功能需要在 claude.ai 中打开页面才能使用。"}</div>`}</div></section>
+  <div class="grid">
+    <section class="panel"><h2 class="ttl">${ic("followups")}下次跟进</h2>
+      <dl class="dl">${f("日期",isDate(c.nextFollowUp)?fmtD(c.nextFollowUp)+" "+fuStatus(c):'<span class="chip warn">未设定</span>')}${f("下一步行动",esc(c.nextAction))}${f("目前在等",WAITING[c.waitingOn||"none"])}${f("未解决的顾虑",esc(c.concerns))}</dl></section>
+    <section class="panel"><h2 class="ttl">${ic("calendar")}即将到来的约见</h2><div class="list">${upcoming.map(a=>`<div class="item clickable" data-act="editActivity" data-id="${a.id}"><span class="dot ${esc(a.cat)}"></span><div class="grow"><div class="t">${esc(a.title)}</div><div class="m num">${fmtD(a.date)} ${esc(a.start||"")}</div></div></div>`).join("")||`<div class="empty">没有安排。</div>`}</div></section>
+  </div>
+  <section class="panel"><h2 class="ttl">${ic("clients")}客户资料</h2><dl class="dl">
+    ${f("电话 / WhatsApp",esc(c.phone))}${f("沟通语言",LANGS[c.lang]||"")}${f("生日",isDate(c.dob)?`${esc(c.dob)}（${age} 岁）`:"")}${f("职业",esc(c.occupation))}
+    ${f("月薪",c.income!=null&&c.income!==""?rm(c.income):"")}${f("性别",c.gender?GENDER[c.gender]:"")}${f("是否吸烟",c.smoker?SMOKER[c.smoker]:"")}${f("婚姻状况",c.marital?MARITAL[c.marital]:"")}${f("需要照顾的家人",c.dependents!=null&&c.dependents!==""?c.dependents+" 人":"")}${f("首次接触",fmtD(c.firstContact))}${f("最近联系",fmtD(c.lastContact))}${f("状态",c.status==="inactive"?"已停用"+(c.lostReason?"："+esc(c.lostReason):""):"活跃")}
+    <div class="full" style="grid-column:1/-1"><dt>保险需求与理财目标</dt><dd>${esc(c.needs)||'<span class="sub">—</span>'}</dd></div>
+    <div style="grid-column:1/-1"><dt>现有保障与保障缺口</dt><dd>${esc(c.coverage)||'<span class="sub">—</span>'}</dd></div>
+    <div style="grid-column:1/-1"><dt>备注</dt><dd>${esc(c.notes)||'<span class="sub">—</span>'}</dd></div></dl></section>
+  <section class="panel"><div class="panel-h"><h2>互动历史（${ms.length} 次）</h2><span class="sub">由早到晚</span></div>
+    ${ms.length?`<div class="tl">${ms.map(meetingTL).join("")}</div>`:`<div class="empty">还没有会面记录。</div>`}</section>
+  <section class="panel"><div class="panel-h"><h2>保单 / 成交</h2><button class="btn sm" data-act="newDeal" data-cid="${c.id}">＋ 保单</button></div>${dealTable(deals,false)}</section>
+  <div class="row"><button class="btn danger sm" data-act="deleteClient" data-id="${c.id}">删除客户…</button></div>`;
+}
+function meetingTL(m){
+  const L=(k,v)=>v?`<p><span class="lbl">${k}</span>${esc(v)}</p>`:"";
+  return `<div class="tl-item"><div class="row"><b>${fmtD(m.date)}</b><span class="sub num">${esc(m.start||"")}${m.end?"–"+esc(m.end):""}</span><span class="chip">${CHANNELS[m.channel]||"其他"}</span>${meetChip(m)}${exChip(m)}<button class="btn sm ghost" data-act="editMeeting" data-id="${m.id}">编辑</button></div>
+    ${L("讨论：",m.summary)}${L("需求：",m.needs)}${L("问题与顾虑：",m.concerns)}${L("异议/延迟原因：",m.objections)}${L("讨论的方案：",m.solutions)}${L("提供的文件：",m.docs)}${L("结果：",m.outcome)}${L("下一步：",m.nextAction)}${m.nextFollowUp?`<p><span class="lbl">下次跟进：</span>${fmtD(m.nextFollowUp)}</p>`:""}${L("备注：",m.notes)}</div>`;
+}
+function renderSummary(c,sum){
+  const d=sum.data||{};const ul=a=>Array.isArray(a)&&a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:'<div class="sub">记录中没有</div>';
+  const stale=(sum.meetingCount!==meetingsOf(c.id).length)||(c.updatedAt&&sum.generatedAt&&c.updatedAt>sum.generatedAt);
+  const sg=[];
+  if(d.suggest_priority&&PRIOS[d.suggest_priority]&&d.suggest_priority!==c.priority)sg.push(`<button class="btn sm" data-act="applySuggest" data-id="${c.id}" data-f="priority" data-v="${esc(d.suggest_priority)}">把优先级改为 ${esc(d.suggest_priority)}</button>`);
+  if(d.suggest_stage&&STAGE_IDX[d.suggest_stage]!=null&&d.suggest_stage!==c.stage)sg.push(`<button class="btn sm" data-act="applySuggest" data-id="${c.id}" data-f="stage" data-v="${esc(d.suggest_stage)}">把阶段改为 ${stageName(d.suggest_stage)}</button>`);
+  return `<div class="ai-box">
+    ${stale?`<div class="banner">摘要生成后有新的资料或会面记录，建议重新生成。</div>`:""}
+    <div><h3>背景与需求</h3><div>${esc(d.background||"记录中没有")}</div></div>
+    <div><h3>互动经过</h3>${ul(d.history)}</div>
+    <div class="grid" style="gap:10px"><div><h3>已讲解的方案</h3>${ul(d.presented)}</div><div><h3>主要顾虑与异议</h3>${ul(d.concerns)}</div></div>
+    <div class="grid" style="gap:10px"><div><h3>偏好与预算</h3><div>${esc(d.preferences||"记录中没有")}</div></div><div><h3>未解决的事项</h3>${ul(d.outstanding)}</div></div>
+    <div><h3>最近一次互动</h3><div>${esc(d.latest||"记录中没有")}</div></div>
+    <div><h3>建议的下一步</h3>${Array.isArray(d.recommendations)&&d.recommendations.length?`<ul>${d.recommendations.map(r=>`<li><b>${esc(r.action)}</b><br><span class="sub">原因：${esc(r.reason)}</span></li>`).join("")}</ul>`:'<div class="sub">没有建议</div>'}</div>
+    ${Array.isArray(d.missing_info)&&d.missing_info.length?`<div><h3>还缺少的资料</h3>${ul(d.missing_info)}</div>`:""}
+    ${sg.length?`<div><h3>AI 建议修改（需要你确认）</h3><div class="sub">${esc(d.suggest_reason||"")}</div><div class="row" style="margin-top:6px">${sg.join("")}</div></div>`:""}
+    <div class="hint">生成于 ${fmtDT(sum.generatedAt)} · 根据 ${sum.meetingCount} 次会面记录 · AI 内容仅供参考，请以你的记录为准</div></div>`;
+}
+
+/* ---------- views: meetings ---------- */
+function vMeetings(){
+  const q=normName(S.meetQ);
+  /* one row per client (latest contact first); tapping a name opens that client's full history, oldest to newest */
+  const groups=new Map();
+  for(const m of S.meetings){if(!groups.has(m.clientId))groups.set(m.clientId,[]);groups.get(m.clientId).push(m)}
+  let rows=[...groups].map(([cid,ms])=>{ms.sort((a,b)=>(a.date+(a.start||"")).localeCompare(b.date+(b.start||"")));return{cid,ms,last:ms[ms.length-1]}});
+  if(q)rows=rows.filter(r=>normName(clientName(r.cid)).includes(q)||r.ms.some(m=>normName(m.summary).includes(q)));
+  rows.sort((a,b)=>(b.last.date+(b.last.start||"")).localeCompare(a.last.date+(a.last.start||"")));
+  const row=({cid,ms,last})=>{const open=S.meetOpen.has(cid),c=byId("clients",cid);
+    return `<div class="mg${open?" open":""}"><button class="mg-h" data-act="toggleMeet" data-id="${cid}" aria-expanded="${open}">
+      <span class="grow"><span class="t">${esc(clientName(cid))}</span> ${c?prioChip(c.priority):""} ${exChip(c)}<span class="m">共 ${ms.length} 次 · 最近 ${fmtD(last.date)}</span></span>${meetChip(last)}<span class="chev" aria-hidden="true">▾</span></button>
+      ${open?`<div class="mg-body"><div class="tl">${ms.map(meetingTL).join("")}</div>
+        <div class="row"><button class="btn sm" data-act="openClient" data-id="${cid}">打开客户资料</button><button class="btn sm primary" data-act="newMeeting" data-cid="${cid}">＋ 记录这位客户的会面</button></div></div>`:""}</div>`};
+  return `<div class="head"><div><div class="sub">${rows.length} 位客户 · ${S.meetings.length} 条记录 · 点名字查看全部会面</div><h1 class="ttl">${ic("meetings",1)}会面记录</h1></div><button class="btn primary" data-act="newMeeting">＋ 记录会面</button></div>
+  <div class="panel"><input type="search" id="meetQ" placeholder="搜索客户姓名或内容" value="${esc(S.meetQ)}" style="max-width:300px">
+  <div>${rows.map(row).join("")||`<div class="empty">还没有会面记录。</div>`}</div></div>`;
+}
+
+/* ---------- views: follow-ups ---------- */
+function vFollowups(){
+  const fu=followups();
+  const sec=(title,arr,note)=>`<section class="panel"><div class="panel-h"><h2>${title}</h2><span class="sub num">${arr.length} 位</span></div>${note?`<div class="hint">${note}</div>`:""}
+    <div class="tbl-wrap"><table><thead><tr><th>客户</th><th>优先级</th><th>阶段</th><th>跟进原因 / 下一步</th><th>日期</th><th></th></tr></thead><tbody>
+    ${arr.map(c=>`<tr class="${c.priority==="A"?"hot":""}"><td class="clickable" data-act="openClient" data-id="${c.id}">${esc(c.name)} ${exChip(c)}</td><td>${prioChip(c.priority)}</td><td>${STAGE_IDX[c.stage]!=null?stageChip(c.stage):""}${rChip(c.rstage)}</td>
+      <td>${esc(c.nextAction||"")}${c.waitingOn&&c.waitingOn!=="none"?` <span class="chip">${WAITING[c.waitingOn]}</span>`:""}</td><td>${fuStatus(c)}</td>
+      <td><div class="row" style="flex-wrap:nowrap"><button class="btn sm primary" data-act="newMeeting" data-cid="${c.id}" data-ch="wa">完成并记录</button><button class="btn sm" data-act="reschedule" data-id="${c.id}">改期</button><button class="btn sm" data-act="draftOne" data-id="${c.id}">草稿</button></div></td></tr>`).join("")||`<tr><td colspan="6" class="empty">没有。</td></tr>`}
+    </tbody></table></div></section>`;
+  return `<div class="head"><div><div class="sub">完成跟进 = 记录这次互动并设定下一次日期，记录后就不会再算逾期</div><h1 class="ttl">${ic("followups",1)}跟进</h1></div>
+    <label class="row sub"><input type="checkbox" id="fuC" ${S.fuIncludeC?"checked":""}> 包含 C 级客户</label></div>
+  ${sec("逾期",fu.overdue,"A 级排在最前")}${sec("今天",fu.today)}${sec("未来 7 天",fu.week)}
+  ${sec("等我修改方案",fu.proposal)}${sec("等文件 / 核保结果",fu.docsuw)}${sec("还没设定下次跟进日期",fu.nodate)}`;
+}
+
+/* ---------- views: pipeline ---------- */
+function vPipeline(){
+  const act=S.clients.filter(c=>c.status!=="inactive"&&(S.pipeShowC||c.priority!=="C"));
+  const pr={A:0,B:1,C:2};
+  const cols=STAGES.map(([k,zh,en])=>{
+    const arr=act.filter(c=>c.stage===k).sort((a,b)=>(pr[a.priority]??3)-(pr[b.priority]??3));
+    const prem=arr.reduce((s,c)=>s+openDealsOf(c.id).reduce((x,d)=>x+(Number(d.estPremium)||0),0),0);
+    return `<div class="kcol"><div class="kcol-h"><h3>${zh} <span class="sub">${en}</span></h3><span class="sub num">${arr.length}</span></div>
+      ${prem?`<div class="hint num">进行中预估保费 ${rm(prem)}</div>`:""}
+      ${arr.map(c=>`<div class="kcard ${c.priority==="A"?"hot":""}"><div class="row" style="justify-content:space-between"><b class="clickable" data-act="openClient" data-id="${c.id}">${esc(c.name)}</b>${prioChip(c.priority)}</div>
+        <div class="hint">${esc(c.nextAction||"未写下一步")}</div><div class="row" style="justify-content:space-between">${fuStatus(c)}
+        <select data-stage-for="${c.id}" aria-label="移动阶段" style="width:auto;padding:3px 6px;font-size:12px">${STAGES.map(s=>`<option value="${s[0]}" ${s[0]===k?"selected":""}>${s[1]}</option>`).join("")}</select></div></div>`).join("")||`<div class="empty">没有客户</div>`}</div>`;
+  }).join("");
+  const unset=act.filter(c=>STAGE_IDX[c.stage]==null&&!c.rstage);
+  const rcols=RSTAGES.map(([k,zh,en])=>{const arr=act.filter(c=>c.rstage===k);
+    return `<div class="kcol"><div class="kcol-h"><h3>${en} <span class="sub">${zh}</span></h3><span class="sub num">${arr.length}</span></div>
+      ${arr.map(c=>`<div class="kcard"><div class="row" style="justify-content:space-between"><b class="clickable" data-act="openClient" data-id="${c.id}">${esc(c.name)}</b>${prioChip(c.priority)}</div><div class="hint">${esc(c.nextAction||"未写下一步")}</div>${fuStatus(c)}</div>`).join("")||`<div class="empty">没有</div>`}</div>`}).join("");
+  return `<div class="head"><div><div class="sub">按客户目前的销售阶段分组 · 优先级和阶段分开设定</div><h1 class="ttl">${ic("pipeline",1)}销售管道</h1></div>
+    <div class="row"><label class="row sub"><input type="checkbox" id="pipeC" ${S.pipeShowC?"checked":""}> 显示 C 级</label><button class="btn" data-act="newDeal">＋ 保单</button></div></div>
+  ${unset.length?`<div class="banner">${unset.length} 位客户没有设定阶段：${unset.map(c=>esc(c.name)).join("、")}</div>`:""}
+  <div class="kanban" style="--n:${STAGES.length}">${cols}</div>
+  <section class="panel"><div class="panel-h"><h2 class="ttl">${ic("clients")}招聘管道</h2><span class="sub">按对方目前的招聘阶段</span></div><div class="kanban" style="--n:${RSTAGES.length}">${rcols}</div></section>
+  <section class="panel"><h2 class="ttl">${ic("reports")}保单进度</h2><div class="hint">「客户已同意」、「已提交申请」、「已生效」分开计算，报告只按你设定的规则计入 MBD。</div>${dealTable(S.deals,true)}</section>`;
+}
+function dealTable(deals,showClient){
+  if(!deals.length)return `<div class="empty">还没有保单记录。</div>`;
+  const ord=Object.keys(DEAL_ST);
+  deals=[...deals].sort((a,b)=>ord.indexOf(a.status)-ord.indexOf(b.status));
+  return `<div class="tbl-wrap"><table><thead><tr>${showClient?"<th>客户</th>":""}<th>产品</th><th>状态</th><th class="n">预估保费</th><th>提交</th><th>生效</th><th class="n">MBD</th><th class="n">确认保费</th><th></th></tr></thead><tbody>
+  ${deals.map(d=>`<tr>${showClient?`<td class="clickable" data-act="openClient" data-id="${d.clientId}">${esc(clientName(d.clientId))} ${exChip(d)}</td>`:""}<td>${esc(d.product)}${d.ref?`<div class="hint">${esc(d.ref)}</div>`:""}</td>
+    <td><span class="chip ${d.status==="inforce"?"ok":d.status==="declined"||d.status==="ntu"?"bad":"st"}">${DEAL_ST[d.status]||"—"}</span></td>
+    <td class="n">${d.estPremium?rm(d.estPremium):"—"}</td><td class="num">${fmtShort(d.submitDate)}</td><td class="num">${fmtShort(d.inforceDate)}</td>
+    <td class="n">${d.mbd!=null&&d.mbd!==""?rm(d.mbd):"—"}</td><td class="n">${d.premium!=null&&d.premium!==""?rm(d.premium):"—"}</td><td><button class="btn sm ghost" data-act="editDeal" data-id="${d.id}">编辑</button></td></tr>`).join("")}
+  </tbody></table></div>`;
+}
+
+/* ---------- reports ---------- */
+function periodRange(){
+  if(S.repMode==="week"){const s=mondayOf(S.repAnchor);return[s,addDays(s,6),`${fmtFull(s)} – ${fmtFull(addDays(s,6))}`]}
+  const s=S.repAnchor.slice(0,7)+"-01",e=addDays(addDays(s,32).slice(0,7)+"-01",-1);const d=parseD(s);return[s,e,`${d.getFullYear()}年${d.getMonth()+1}月`];
+}
+const inR=(d,s,e)=>isDate(d)&&d>=s&&d<=e;
+function metrics(s,e){
+  const ms=S.meetings.filter(m=>inR(m.date,s,e));
+  const byStage=Object.fromEntries(STAGES.map(x=>[x[0],0])),byR=Object.fromEntries(RSTAGES.map(x=>[x[0],0]));
+  ms.forEach(m=>{if(m.module==="recruit"){if(byR[m.stage]!=null)byR[m.stage]++}else if(byStage[m.stage]!=null)byStage[m.stage]++});
+  const uniq=new Set(ms.map(m=>m.clientId)).size;
+  const newP=S.clients.filter(c=>inR(c.firstContact,s,e)).length;
+  let progressed=0;
+  for(const cid of new Set(ms.map(m=>m.clientId))){
+    const all=meetingsOf(cid).filter(m=>m.module!=="recruit");const before=all.filter(m=>m.date<s).pop();const inside=all.filter(m=>inR(m.date,s,e));const last=inside[inside.length-1];
+    const from=before?STAGE_IDX[before.stage]:(inside[0]?STAGE_IDX[inside[0].stage]:null);
+    if(last&&from!=null&&STAGE_IDX[last.stage]>from)progressed++;
+  }
+  const basis=mbdBasis();
+  const submitted=S.deals.filter(d=>inR(d.submitDate,s,e)&&d.status!=="agreed").length;
+  const inforceDeals=S.deals.filter(d=>d.status==="inforce"&&inR(d.inforceDate,s,e));
+  const countDeals=basis==="inforce"?inforceDeals:S.deals.filter(d=>inR(d.submitDate,s,e)&&!["agreed","declined","ntu"].includes(d.status));
+  const missingMbd=countDeals.filter(d=>d.mbd==null||d.mbd==="").length;
+  const acts=S.activities.filter(a=>inR(a.date,s,e));
+  const nonCancel=acts.filter(a=>a.status!=="cancelled");
+  return{meetings:ms.length,uniq,newP,byStage,byR,progressed,submitted,inforce:inforceDeals.length,
+    mbd:countDeals.reduce((x,d)=>x+(Number(d.mbd)||0),0),premium:countDeals.reduce((x,d)=>x+(Number(d.premium)||0),0),missingMbd,
+    planned:nonCancel.length,done:acts.filter(a=>a.status==="done").length,cancelled:acts.filter(a=>a.status==="cancelled").length,
+    rescheduled:acts.filter(a=>a.status==="rescheduled"||(a.rescheduledCount||0)>0).length,
+    work:acts.filter(a=>a.cat==="work"&&a.status!=="cancelled").length,personal:acts.filter(a=>a.cat==="personal"&&a.status!=="cancelled").length};
+}
+function forecast(){
+  const w=S.settings.weights||{};const hasW=OPEN_DEAL.some(k=>w[k]!=null&&w[k]!=="");
+  const rows=OPEN_DEAL.map(k=>{const ds=S.deals.filter(d=>d.status===k);const tot=ds.reduce((x,d)=>x+(Number(d.estPremium)||0),0);const wt=Number(w[k]);return{k,n:ds.length,tot,wt:isFinite(wt)&&w[k]!==""&&w[k]!=null?wt:null}});
+  return{hasW,rows,total:rows.reduce((x,r)=>x+r.tot,0),weighted:rows.reduce((x,r)=>x+(r.wt!=null?r.tot*r.wt/100:0),0)};
+}
+function vReports(){
+  const [s,e,label]=periodRange(),m=metrics(s,e),fu=followups(),fc=forecast();
+  const act=S.clients.filter(c=>c.status!=="inactive");
+  const prioCount=k=>S.clients.filter(c=>c.priority===k&&c.status!=="inactive").length;
+  const stageCount=k=>act.filter(c=>c.stage===k).length;
+  const next=S.activities.filter(a=>inR(a.date,addDays(e,1),addDays(e,7))&&a.status!=="cancelled").sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+  const attention=act.filter(c=>c.priority==="A"&&(!isDate(c.nextFollowUp)||c.nextFollowUp<today()));
+  const weeks=[...Array(8)].map((_,i)=>{const ws=addDays(mondayOf(today()),-7*(7-i));const mm=metrics(ws,addDays(ws,6));return{ws,meet:mm.meetings,pres:mm.byStage.present}});
+  const st=(l,v,sm)=>`<div class="stat"><span>${l}</span><b class="num">${v}</b>${sm?`<small>${sm}</small>`:""}</div>`;
+  return `<div class="head"><div><div class="sub">${S.repMode==="week"?"每周":"每月"}报告</div><h1 class="ttl">${ic("reports",1)}${label}</h1></div>
+    <div class="row"><div class="seg"><button data-act="repMode" data-m="week" aria-pressed="${S.repMode==="week"}">周</button><button data-act="repMode" data-m="month" aria-pressed="${S.repMode==="month"}">月</button></div>
+    <button class="btn" data-act="repNav" data-n="-1">‹</button><button class="btn" data-act="repNav" data-n="0">本${S.repMode==="week"?"周":"月"}</button><button class="btn" data-act="repNav" data-n="1">›</button>
+    <button class="btn primary" data-act="copyReport">复制报告文字</button></div></div>
+  <section class="panel"><h2 class="ttl">${ic("clients")}客户活动</h2><div class="stats">
+    ${st("客户会面",m.meetings)}${st("见过的客户",m.uniq,"不重复")}${st("新接触客户",m.newP)}${STAGES.map(([k,zh,en])=>st(en+" "+zh,m.byStage[k])).join("")}</div></section>
+  <section class="panel"><h2 class="ttl">${ic("clients")}招聘活动</h2><div class="stats">${RSTAGES.map(([k,zh,en])=>st(en+" "+zh,m.byR[k])).join("")}</div></section>
+  ${weeklyChartsPanel(mondayOf(e))}
+  <section class="panel"><h2 class="ttl">${ic("pipeline")}销售进度</h2><div class="stats">
+    ${st("推进到下一阶段",m.progressed,"本期内")}${st("已提交申请",m.submitted,"按提交日期")}${st("已生效保单",m.inforce,"按生效日期")}${st("MBD",rm(m.mbd),mbdBasis()==="inforce"?"只计已生效":"按提交日计")}${st("确认保费",rm(m.premium))}</div>
+    ${m.missingMbd?`<div class="banner">${m.missingMbd} 份应计入的保单还没填 MBD，所以 MBD 总数可能偏低。</div>`:""}
+    <div class="grid" style="gap:12px">
+      <div><h3>优先级（目前）</h3><div class="row" style="margin-top:6px">${["A","B","C"].map(k=>`${prioChip(k)} <span class="num">${prioCount(k)}</span>`).join("&nbsp;&nbsp;")}</div></div>
+      <div><h3>各阶段客户（目前）</h3><div class="row" style="margin-top:6px">${STAGES.map(x=>`<span class="chip st">${x[1]} ${stageCount(x[0])}</span>`).join("")}</div></div>
+      <div><h3>在等什么</h3><div class="row" style="margin-top:6px"><span class="chip">等客户决定 ${act.filter(c=>c.waitingOn==="decision").length}</span><span class="chip">等文件/核保 ${act.filter(c=>c.waitingOn==="docs"||c.waitingOn==="uw").length}</span><span class="chip">等修改方案 ${act.filter(c=>c.waitingOn==="proposal").length}</span></div></div></div></section>
+  <section class="panel"><div class="panel-h"><h2>保费预测（进行中的保单）</h2><button class="btn sm ghost" data-act="go" data-v="agent">设定权重</button></div>
+    <div class="tbl-wrap"><table><thead><tr><th>状态</th><th class="n">份数</th><th class="n">预估年缴保费</th><th class="n">权重</th><th class="n">加权预测</th></tr></thead><tbody>
+    ${fc.rows.map(r=>`<tr><td>${DEAL_ST[r.k]}</td><td class="n">${r.n}</td><td class="n">${rm(r.tot)}</td><td class="n">${r.wt!=null?r.wt+"%":"—"}</td><td class="n">${r.wt!=null?rm(r.tot*r.wt/100):"—"}</td></tr>`).join("")}
+    <tr><td><b>合计</b></td><td class="n"><b>${fc.rows.reduce((x,r)=>x+r.n,0)}</b></td><td class="n"><b>${rm(fc.total)}</b></td><td></td><td class="n"><b>${fc.hasW?rm(fc.weighted):"—"}</b></td></tr></tbody></table></div>
+    ${fc.hasW?"":`<div class="hint">还没设定各状态的成交权重，所以只显示未加权的总数。权重由你决定，在「每日助理 → 设置」里填写。</div>`}</section>
+  <div class="grid">
+    <section class="panel"><h2>时间与活动</h2><div class="stats">${st("计划的活动",m.planned)}${st("已完成",m.done)}${st("已取消",m.cancelled)}${st("改期",m.rescheduled)}${st("会议/培训",m.work)}${st("个人事务",m.personal)}</div></section>
+    <section class="panel"><h2>近 8 周客户会面</h2>${barChart(weeks)}</section></div>
+  <div class="grid">
+    <section class="panel"><h2 class="ttl">${ic("star")}需要多加关注</h2><div class="list">${attention.map(c=>`<div class="item clickable" data-act="openClient" data-id="${c.id}"><div class="grow"><div class="t">${esc(c.name)}</div><div class="m">${esc(c.nextAction||"未写下一步")}</div></div>${fuStatus(c)}</div>`).join("")||`<div class="empty">A 级客户都有安排好的跟进。</div>`}</div>
+      <div class="hint">逾期跟进 ${fu.overdue.length} 位 · 未设定日期 ${fu.nodate.length} 位</div></section>
+    <section class="panel"><h2>下一段时间的安排</h2><div class="list">${next.slice(0,10).map(a=>`<div class="item clickable" data-act="editActivity" data-id="${a.id}"><span class="dot ${esc(a.cat)}"></span><div class="grow"><div class="t">${esc(a.title)}</div><div class="m num">${fmtD(a.date)} ${esc(a.start||"")}</div></div></div>`).join("")||`<div class="empty">接下来 7 天没有安排。</div>`}</div></section></div>`;
+}
+function barChart(weeks){
+  const W=520,H=170,pl=28,pb=24,pt=10,max=Math.max(4,...weeks.map(w=>w.meet));
+  const bw=(W-pl)/weeks.length;const y=v=>pt+(H-pt-pb)*(1-v/max);
+  const ticks=[0,Math.round(max/2),max];
+  return `<div class="tbl-wrap"><svg class="bar-chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="近8周客户会面次数">
+    ${ticks.map(t=>`<line x1="${pl}" x2="${W}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${pl-6}" y="${y(t)+4}" text-anchor="end">${t}</text>`).join("")}
+    ${weeks.map((w,i)=>{const x=pl+i*bw+bw*.18,bwid=bw*.64;return `<rect x="${x}" y="${y(w.meet)}" width="${bwid}" height="${H-pb-y(w.meet)}" rx="3" fill="var(--c-client)"><title>${fmtShort(w.ws)} 当周：${w.meet} 次会面，${w.pres} 次方案讲解</title></rect>
+      ${w.meet?`<text x="${x+bwid/2}" y="${y(w.meet)-3}" text-anchor="middle">${w.meet}</text>`:""}<text x="${x+bwid/2}" y="${H-8}" text-anchor="middle">${fmtShort(w.ws)}</text>`}).join("")}
+  </svg></div><div class="hint">每根柱代表一周（周一开始）</div>`;
+}
+function reportText(){
+  const [s,e,label]=periodRange(),m=metrics(s,e),fu=followups();
+  return [`【${S.repMode==="week"?"每周":"每月"}报告】${label}`,"",
+    "客户活动",`· 客户会面：${m.meetings} 次（${m.uniq} 位客户）`,`· 新接触客户：${m.newP}`,"· "+STAGES.map(([k,zh,en])=>`${en} ${m.byStage[k]}`).join(" / "),"· 招聘："+RSTAGES.map(([k,zh,en])=>`${en} ${m.byR[k]}`).join(" / "),"",
+    "销售进度",`· 推进到下一阶段：${m.progressed} 位`,`· 已提交申请：${m.submitted} 份`,`· 已生效保单：${m.inforce} 份`,`· MBD：${rm(m.mbd)}（${mbdBasis()==="inforce"?"只计已生效":"按提交日计"}）`,`· 确认保费：${rm(m.premium)}`,m.missingMbd?`· 注意：${m.missingMbd} 份保单还没填 MBD`:null,"",
+    "跟进",`· 逾期：${fu.overdue.length} 位`,`· 未来 7 天：${fu.week.length} 位`,`· 未设定日期：${fu.nodate.length} 位`,"",
+    "时间管理",`· 计划 ${m.planned} 个活动，完成 ${m.done}，取消 ${m.cancelled}，改期 ${m.rescheduled}`,`· 会议/培训 ${m.work}，个人事务 ${m.personal}`].filter(x=>x!==null).join("\n");
+}
+
+/* ---------- agent view ---------- */
+function vAgent(){
+  const drafts=S.drafts.filter(d=>d.status==="pending").sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)));
+  const done=S.drafts.filter(d=>d.status!=="pending").sort((a,b)=>String(b.decidedAt||"").localeCompare(String(a.decidedAt||""))).slice(0,10);
+  const rep=S.reports[0],runs=S.runs;
+  const st=S.settings,w=st.weights||{};
+  return `<div class="head"><div><div class="sub">每天 07:30 和 21:00 自动检查资料、整理报告、准备跟进草稿 · 发送前一定要你批准</div><h1 class="ttl">${ic("agent",1)}每日助理</h1></div></div>
+  <section class="panel"><div class="panel-h"><h2 class="ttl">${ic("meetings")}待批准的 WhatsApp 草稿</h2><span class="sub num">${drafts.length} 条</span></div>
+    <div class="hint">批准后会打开 WhatsApp 并填好文字，由你自己按发送。系统不会自动发送任何讯息。</div>
+    ${drafts.map(draftCard).join("")||`<div class="empty">没有待批准的草稿。</div>`}</section>
+  <section class="panel"><div class="panel-h"><h2 class="ttl">${ic("agent")}最新的助理报告</h2><span class="sub">${rep?fmtDT(rep.at)+" · "+(rep.kind==="evening"?"晚间回顾":rep.kind==="morning"?"早上行动清单":"手动执行"):""}</span></div>
+    ${rep?`<div class="pre">${esc(rep.text)}</div>`:`<div class="empty">助理还没有执行过。</div>`}</section>
+  <section class="panel"><h2>运行记录</h2>
+    <div class="tbl-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>结果</th><th class="n">检查的客户</th><th class="n">新草稿</th><th>发现的问题</th></tr></thead><tbody>
+    ${runs.map(r=>`<tr><td class="num">${fmtDT(r.at)}</td><td>${r.kind==="evening"?"晚间":r.kind==="morning"?"早上":"手动"}</td><td><span class="chip ${r.status==="ok"?"ok":r.status==="warning"?"warn":"bad"}">${r.status==="ok"?"正常":r.status==="warning"?"有提醒":"出错"}</span></td>
+      <td class="n">${r.checked?.clients??"—"}</td><td class="n">${r.drafts??0}</td><td>${Array.isArray(r.issues)&&r.issues.length?`<ul style="margin:0;padding-left:16px">${r.issues.map(i=>`<li>${esc(i)}</li>`).join("")}</ul>`:'<span class="sub">无</span>'}</td></tr>`).join("")||`<tr><td colspan="6" class="empty">还没有记录。</td></tr>`}
+    </tbody></table></div></section>
+  ${done.length?`<section class="panel"><h2>已处理的草稿</h2><div class="list">${done.map(d=>`<div class="item"><div class="grow"><div class="t">${esc(clientName(d.clientId))}</div><div class="m">${esc((d.text||"").slice(0,70))}</div></div><span class="chip ${d.status==="approved"?"ok":""}">${d.status==="approved"?"已批准":"已跳过"}</span></div>`).join("")}</div></section>`:""}
+  <section class="panel"><h2>设置</h2>
+    <form id="settingsForm" class="form">
+      <label class="f full"><span>公司的 MBD 计算规则（用文字写下，方便以后核对）</span><textarea name="mbdRule" placeholder="例如：保单生效后，按首年年化保费计算">${esc(st.mbdRule||"")}</textarea></label>
+      <label class="f"><span>报告中 MBD 和保费按什么计入</span><select name="mbdBasis"><option value="inforce" ${mbdBasis()==="inforce"?"selected":""}>只计已生效保单（按生效日期）</option><option value="submitted" ${mbdBasis()==="submitted"?"selected":""}>已提交的申请（按提交日期）</option></select></label>
+      <label class="f"><span>今日天气的地点</span><select name="weatherLoc">${opts(WLOC,st.weatherLoc||"pangkor")}</select></label>
+      <div class="full"><div class="hint" style="margin-bottom:6px">保费预测权重（%）。由你决定，留空 = 不加权。</div><div class="form">${OPEN_DEAL.map(k=>`<label class="f"><span>${DEAL_ST[k]}</span><input type="number" min="0" max="100" name="w_${k}" value="${esc(w[k]??"")}"></label>`).join("")}</div></div>
+      <div class="full row"><button class="btn primary" type="submit">保存设置</button><span class="err" id="settingsErr"></span></div>
+    </form>
+    <div class="row" style="border-top:1px solid var(--line);padding-top:12px">
+      <button class="btn" data-act="backup" ${downloads||S.dbState==="local"?"":"disabled"}>下载备份（JSON）</button>
+      <label class="btn">从备份恢复…<input type="file" id="restoreFile" accept="application/json,.json" hidden></label>
+      ${S.clients.some(c=>c.example)||S.meetings.some(m=>m.example)?`<button class="btn danger" data-act="clearExamples">清除所有示例资料</button>`:""}</div>
+    <div class="hint">资料只有你自己（这个页面的拥有者）可以读取和修改。请不要输入身份证号码或病历细节。</div></section>`;
+}
+function draftCard(d){
+  const c=byId("clients",d.clientId);const ph=phoneDigits(c?.phone);
+  return `<div class="panel" style="background:var(--surface2);border:0"><div class="panel-h"><div class="row"><b>${esc(c?c.name:"（已删除的客户）")}</b>${c?prioChip(c.priority)+stageChip(c.stage):""}${exChip(d)}<span class="chip">${d.source==="agent"?"助理生成":"手动生成"}</span></div><span class="sub">${fmtDT(d.createdAt)}</span></div>
+    ${d.reason?`<div class="hint">原因：${esc(d.reason)}</div>`:""}
+    <textarea id="dt_${d.id}" rows="4">${esc(d.text)}</textarea>
+    <div class="row">${ph?`<a class="btn primary" href="https://wa.me/${ph}?text=${encodeURIComponent(d.text||"")}" target="_blank" rel="noopener" data-act="approveDraft" data-id="${d.id}">批准并打开 WhatsApp</a>`:`<span class="err">这位客户没有电话号码，无法打开 WhatsApp。</span>`}
+      <button class="btn" data-act="copyDraft" data-id="${d.id}">复制文字</button><button class="btn" data-act="saveDraft" data-id="${d.id}">保存修改</button><button class="btn ghost" data-act="skipDraft" data-id="${d.id}">跳过</button></div></div>`;
+}
+
+/* ---------- modal ---------- */
+function modal(title,body,{onMount,wide}={}){
+  const root=document.getElementById("modal-root");
+  root.innerHTML=`<div class="overlay" id="ov"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}" ${wide?'style="max-width:820px"':""}><div class="modal-h"><h2>${esc(title)}</h2><button class="btn ghost" data-act="closeModal" aria-label="关闭">✕</button></div>${body}</div></div>`;
+  const ov=document.getElementById("ov");ov.addEventListener("mousedown",e=>{if(e.target===ov)closeModal()});
+  document.getElementById("fab").hidden=true;
+  onMount&&onMount(root);
+  const first=root.querySelector("input:not([type=hidden]):not([type=checkbox]),select,textarea");first&&first.focus({preventScroll:true});
+}
+function closeModal(){document.getElementById("modal-root").innerHTML="";document.getElementById("fab").hidden=false}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.getElementById("ov"))closeModal()});
+function confirmBox(title,msg,okLabel,onOk,{typeToConfirm}={}){
+  modal(title,`<div class="pre">${esc(msg)}</div>${typeToConfirm?`<label class="f"><span>请输入「${esc(typeToConfirm)}」确认</span><input type="text" id="cfTxt"></label>`:""}<div class="err" id="cfErr"></div>
+    <div class="modal-f"><button class="btn" data-act="closeModal">取消</button><button class="btn danger" id="cfOk">${esc(okLabel)}</button></div>`,{onMount:r=>{
+    r.querySelector("#cfOk").onclick=async()=>{if(typeToConfirm&&r.querySelector("#cfTxt").value.trim()!==typeToConfirm){r.querySelector("#cfErr").textContent="输入的内容不一致。";return}
+      try{await onOk();closeModal()}catch(e){r.querySelector("#cfErr").textContent=dbErr(e)}};}});
+}
+let toastT;
+function toast(msg){let t=document.getElementById("toast");if(!t){t=document.createElement("div");t.id="toast";t.className="toast";t.setAttribute("role","status");document.body.appendChild(t)}t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true},2600)}
+const clientOptions=sel=>[...S.clients].sort((a,b)=>(a.status==="inactive")-(b.status==="inactive")||a.name.localeCompare(b.name,"zh")).map(c=>`<option value="${c.id}" ${c.id===sel?"selected":""}>${esc(c.name)}${c.priority?" ("+c.priority+")":""}${c.status==="inactive"?" · 已停用":""}</option>`).join("");
+const opts=(obj,sel)=>Object.entries(obj).map(([k,v])=>`<option value="${k}" ${k===sel?"selected":""}>${v}</option>`).join("");
+const stageOpts=sel=>STAGES.map(s=>`<option value="${s[0]}" ${s[0]===sel?"selected":""}>${s[1]}（${s[2]}）</option>`).join("");
+const formData=f=>Object.fromEntries([...new FormData(f).entries()].map(([k,v])=>[k,typeof v==="string"?v.trim():v]));
+
+/* ---------- client form ---------- */
+function findDup(name,phone,exceptId){
+  const n=normName(name),p=phoneDigits(phone);
+  return S.clients.find(c=>c.id!==exceptId&&(normName(c.name)===n||(p&&p.length>=8&&phoneDigits(c.phone)===p)));
+}
+function clientFields(c={},inMeeting){
+  return `<label class="f req"><span>姓名</span><input type="text" name="name" value="${esc(c.name)}" required></label>
+    <label class="f"><span>电话 / WhatsApp</span><input type="tel" name="phone" value="${esc(c.phone)}" placeholder="例如 012-345 6789"></label>
+    <label class="f"><span>生日</span><input type="date" name="dob" value="${esc(c.dob)}"></label>
+    <label class="f"><span>性别</span><select name="gender">${opts(GENDER,c.gender||"")}</select></label>
+    <label class="f"><span>月薪（RM）</span><input type="number" name="income" min="0" step="100" value="${esc(c.income??"")}"></label>
+    <label class="f"><span>是否吸烟</span><select name="smoker">${opts(SMOKER,c.smoker||"")}</select></label>
+    <label class="f"><span>职业</span><input type="text" name="occupation" value="${esc(c.occupation)}"></label>
+    <label class="f"><span>婚姻状况</span><select name="marital">${opts(MARITAL,c.marital||"")}</select></label>
+    <label class="f"><span>需要照顾的家人（人数）</span><input type="number" name="dependents" min="0" max="20" step="1" value="${esc(c.dependents??"")}"></label>
+    <label class="f"><span>沟通语言</span><select name="lang">${opts(LANGS,c.lang||"zh")}</select></label>
+    ${inMeeting?"":`<label class="f"><span>优先级</span><select name="priority">${opts(PRIOS,c.priority||"B")}</select></label>
+    <label class="f"><span>销售阶段</span><select name="stage">${stageOpts(c.stage||"open")}</select></label>`}`;
+}
+function clientForm(c){
+  const isNew=!c;c=c||{firstContact:today()};
+  modal(isNew?"新客户":"编辑客户资料",`<form id="cf" class="form" novalidate>${clientFields(c)}
+    <label class="f"><span>首次接触日期</span><input type="date" name="firstContact" value="${esc(c.firstContact)}"></label>
+    <label class="f"><span>下次跟进日期</span><input type="date" name="nextFollowUp" value="${esc(c.nextFollowUp)}"></label>
+    <label class="f"><span>招聘阶段</span><select name="rstage"><option value="">— 不是招聘对象 —</option>${RSTAGES.map(([k,zh,en])=>`<option value="${k}" ${c.rstage===k?"selected":""}>${en} ${zh}</option>`).join("")}</select></label>
+    <label class="f full"><span>下一步行动</span><input type="text" name="nextAction" value="${esc(c.nextAction)}"></label>
+    <label class="f"><span>目前在等</span><select name="waitingOn">${opts(WAITING,c.waitingOn||"none")}</select></label>
+    <label class="f"><span>状态</span><select name="status"><option value="active" ${c.status!=="inactive"?"selected":""}>活跃</option><option value="inactive" ${c.status==="inactive"?"selected":""}>停用（保留所有记录）</option></select></label>
+    <label class="f full"><span>停用 / 流失原因</span><input type="text" name="lostReason" value="${esc(c.lostReason)}"></label>
+    <label class="f full"><span>保险需求与理财目标</span><textarea name="needs">${esc(c.needs)}</textarea></label>
+    <label class="f full"><span>现有保障与保障缺口</span><textarea name="coverage">${esc(c.coverage)}</textarea></label>
+    <label class="f full"><span>未解决的顾虑</span><textarea name="concerns">${esc(c.concerns)}</textarea></label>
+    <label class="f full"><span>备注</span><textarea name="notes">${esc(c.notes)}</textarea></label>
+    <div class="err full" id="cfErr"></div>
+    <div class="modal-f full"><button type="button" class="btn" data-act="closeModal">取消</button><button class="btn primary" type="submit">保存</button></div></form>`,{onMount:r=>{
+      const f=r.querySelector("#cf");let dupOk=false;
+      f.onsubmit=async e=>{e.preventDefault();const d=formData(f),err=r.querySelector("#cfErr");
+        const v=validateClient(d);if(v){err.textContent=v;return}
+        const dup=findDup(d.name,d.phone,c.id);
+        if(dup&&!dupOk){err.innerHTML=`已经有一位相似的客户：<b>${esc(dup.name)}</b>${dup.phone?"（"+esc(dup.phone)+"）":""}。如果是同一个人，请打开那份资料。如果确实是另一位客户，请再按一次「保存」。`;dupOk=true;return}
+        const data=cleanClient(d);
+        try{if(isNew){const id=newId("clients");await put("clients",id,Object.assign(data,{createdAt:nowIso(),updatedAt:nowIso()}));closeModal();toast("已新增客户");S.view="clients";S.clientId=id;render()}
+          else{await patch("clients",c.id,Object.assign(data,{updatedAt:nowIso()}));closeModal();toast("已保存")}}catch(x){err.textContent=dbErr(x)}};
+    }});
+}
+function validateClient(d){
+  if(!d.name)return "请填写客户姓名。";
+  if(d.dob&&(!isDate(d.dob)||d.dob>today()))return "生日日期不正确。";
+  if(d.income!==""&&d.income!=null&&(isNaN(num(d.income))||num(d.income)<0))return "月收入必须是数字。";
+  if(d.phone&&phoneDigits(d.phone).length<9)return "电话号码看起来太短，请检查。";
+  if(d.dependents!==""&&d.dependents!=null&&(!Number.isInteger(num(d.dependents))||num(d.dependents)<0||num(d.dependents)>20))return "家人人数要填 0 到 20 的整数。";
+  return "";
+}
+function cleanClient(d){
+  const o={};
+  if("dependents" in d)o.dependents=d.dependents===""?null:num(d.dependents);
+  for(const k of ["name","phone","dob","gender","smoker","marital","occupation","lang","priority","stage","firstContact","nextFollowUp","nextAction","waitingOn","rstage","status","lostReason","needs","coverage","concerns","notes"])if(k in d)o[k]=d[k]||"";
+  if("income" in d)o.income=d.income===""?null:num(d.income);
+  return o;
+}
+
+/* ---------- meeting form ---------- */
+function meetingForm(m,pre={}){
+  const isNew=!m;m=m||{date:today(),channel:pre.ch||"f2f",clientId:pre.cid||""};
+  const c=m.clientId?byId("clients",m.clientId):null;
+  const nowM=new Date().getHours()*60+new Date().getMinutes();
+  if(isNew&&!m.start){m.end=pre.end||fromMin(Math.max(420,Math.min(nowM-nowM%15,1380)));m.start=pre.start||fromMin(Math.max(420,toMin(m.end)-60))}
+  if(pre.date)m.date=pre.date;
+  const mod=m.module||pre.mod||"sales";
+  const stage=mod==="sales"&&STAGE_IDX[m.stage]!=null?m.stage:(c&&STAGE_IDX[c.stage]!=null?c.stage:"open");
+  const rstage=mod==="recruit"&&m.stage?m.stage:((c&&c.rstage)||"ro");
+  const dl0=m.dealId?byId("deals",m.dealId):null;
+  const picker=(list,colors,name,sel)=>list.map(([k,zh,en])=>`<label><input type="radio" name="${name}" value="${k}" ${k===sel?"checked":""}><span><i class="sw" style="background:${colors[k]}"></i>${en}<small>${zh}</small></span></label>`).join("");
+  modal(isNew?"记录会面":"编辑会面记录",`<form id="mf" class="form" novalidate>
+    <div class="f req full"><span>客户名字</span>
+      <div class="ta"><input type="text" id="mfQ" autocomplete="off" placeholder="直接输入客户名字或电话" value="${esc(c?c.name:"")}" role="combobox" aria-expanded="false" aria-controls="mfList">
+        <div class="ta-list" id="mfList" role="listbox" hidden></div></div>
+      <input type="hidden" name="clientId" id="mfClient" value="${esc(m.clientId||"")}">
+      <div class="hint" id="mfSel"></div>
+      <div class="ta-ask" id="mfAsk" hidden></div></div>
+    <div class="full form" id="mfNew" hidden>${clientFields({},true)}</div>
+    <label class="f req"><span>日期</span><input type="date" name="date" value="${esc(m.date)}"></label>
+    <label class="f"><span>开始</span><input type="time" name="start" value="${esc(m.start)}"></label>
+    <label class="f"><span>结束</span><input type="time" name="end" value="${esc(m.end)}"></label>
+    <label class="f"><span>方式</span><select name="channel">${opts(CHANNELS,m.channel)}</select></label>
+    <div class="f req full"><span>这次属于哪个模块</span><div class="mod-pick" role="radiogroup" aria-label="模块">
+      <label><input type="radio" name="module" value="sales" ${mod==="sales"?"checked":""}><span>${ICONS.reports}个人销售</span></label>
+      <label><input type="radio" name="module" value="recruit" ${mod==="recruit"?"checked":""}><span>${ICONS.clients}招聘</span></label></div></div>
+    <div class="f req full" id="mfSalesW"><span>个人销售：属于哪个阶段</span><div class="stage-pick" id="mfStage" role="radiogroup" aria-label="个人销售阶段">${picker(STAGES,STAGE_COLOR,"stage",stage)}</div></div>
+    <div class="f req full" id="mfRecW"><span>招聘：属于哪个阶段</span><div class="stage-pick" id="mfRStage" role="radiogroup" aria-label="招聘阶段">${picker(RSTAGES,RSTAGE_COLOR,"rstage",rstage)}</div></div>
+    <div class="full close-box" id="mfClose">
+      <label class="f req"><span>成交 ANP（RM）</span><input type="number" name="anp" min="0" step="1" value="${esc(dl0?(dl0.premium??dl0.estPremium??""):"")}" placeholder="例如 3600"></label>
+      <label class="f"><span>成交保单张数</span><input type="number" name="policies" min="1" max="20" step="1" value="${esc(dl0?(dl0.policies||1):1)}"></label>
+      <label class="f"><span>产品 / 计划（选填）</span><input type="text" name="product" value="${esc(dl0?dl0.product:"")}"></label>
+      <div class="hint">保存后会自动在「保单 / 成交」记录一笔，按这次会面日期计入当周的成交保单和 NB（ANP）。${dl0?"这次会面已经有成交记录，修改会更新那一笔。":""}</div></div>
+    <label class="f"><span>会后优先级</span><select name="priority" id="mfPrio">${opts(PRIOS,(c&&c.priority)||"B")}</select></label>
+    <label class="f full req"><span>讨论摘要</span><textarea name="summary" id="mfSummary" placeholder="${esc(STAGE_HINTS[stage])}">${esc(m.summary)}</textarea></label>
+    <label class="f full"><span>结果</span><input type="text" name="outcome" value="${esc(m.outcome)}" placeholder="例如：客户想先和太太商量"></label>
+    <label class="f full"><span>下一步行动</span><input type="text" name="nextAction" value="${esc(m.nextAction)}" placeholder="例如：发修改后的方案给客户"></label>
+    <label class="f"><span>下次跟进日期</span><input type="date" name="nextFollowUp" value="${esc(m.nextFollowUp)}"></label>
+    <label class="f"><span>目前在等</span><select name="waitingOn">${opts(WAITING,(c&&c.waitingOn)||"none")}</select></label>
+    ${isNew?`<label class="f"><span>把跟进加入日历（时间）</span><input type="time" name="fuTime" placeholder="不填 = 不加入"></label>`:""}
+    <details class="full"><summary>更多细节（需求、顾虑、方案、文件）</summary><div class="form" style="margin-top:10px">
+      <label class="f full"><span>客户的保险需求</span><textarea name="needs">${esc(m.needs)}</textarea></label>
+      <label class="f full"><span>客户的问题与顾虑</span><textarea name="concerns">${esc(m.concerns)}</textarea></label>
+      <label class="f full"><span>异议 / 延迟决定的原因</span><textarea name="objections">${esc(m.objections)}</textarea></label>
+      <label class="f full"><span>讨论过的保险方案</span><textarea name="solutions">${esc(m.solutions)}</textarea></label>
+      <label class="f full"><span>提供的文件或建议书</span><input type="text" name="docs" value="${esc(m.docs)}"></label>
+      <label class="f full"><span>其他备注</span><textarea name="notes">${esc(m.notes)}</textarea></label></div></details>
+    <div class="err full" id="mfErr"></div>
+    <div class="modal-f full">${isNew?"":`<button type="button" class="btn danger" id="mfDel" style="margin-right:auto">删除</button>`}<button type="button" class="btn" data-act="closeModal">取消</button><button class="btn primary" type="submit">保存</button></div></form>`,{wide:true,onMount:r=>{
+    const f=r.querySelector("#mf"),sel=r.querySelector("#mfClient"),nw=r.querySelector("#mfNew"),stg=r.querySelector("#mfStage"),sm=r.querySelector("#mfSummary");
+    const syncNew=()=>{nw.hidden=sel.value!=="__new";const sc=byId("clients",sel.value);
+      r.querySelector("#mfSel").innerHTML=sel.value==="__new"?"将创建新客户，可以在下面补充资料。":sc?`已选：<b>${esc(sc.name)}</b> ${prioChip(sc.priority)} ${stageChip(sc.stage)}${sc.phone?" · "+esc(sc.phone):""}`:"";nw.querySelectorAll("input,select").forEach(i=>i.disabled=nw.hidden);
+      const cc=byId("clients",sel.value);if(cc&&isNew){if(!f.dataset.st){f.elements.stage.value=STAGE_IDX[cc.stage]!=null?cc.stage:"open";f.elements.rstage.value=cc.rstage||"ro";if(cc.rstage&&STAGE_IDX[cc.stage]==null)f.elements.module.value="recruit"}r.querySelector("#mfPrio").value=cc.priority||"B";f.waitingOn.value=cc.waitingOn||"none"}syncMod()};
+    function syncMod(){const md=f.elements.module.value||"sales",sw=r.querySelector("#mfSalesW"),rw=r.querySelector("#mfRecW"),cb=r.querySelector("#mfClose");
+      sw.hidden=md!=="sales";rw.hidden=md!=="recruit";
+      sw.querySelectorAll("input").forEach(i=>i.disabled=sw.hidden);rw.querySelectorAll("input").forEach(i=>i.disabled=rw.hidden);
+      cb.hidden=!(md==="sales"&&f.elements.stage.value==="closing");cb.querySelectorAll("input").forEach(i=>i.disabled=cb.hidden);
+      sm.placeholder=md==="sales"?(STAGE_HINTS[f.elements.stage.value]||""):"招聘：这次谈了什么、对方对这份事业的兴趣和顾虑、下一步（讲座、定位、考试、签约）"}
+    /* type-ahead: matching clients appear while typing; an unknown name asks before a new client is created */
+    const q=r.querySelector("#mfQ"),list=r.querySelector("#mfList"),ask=r.querySelector("#mfAsk");
+    let hi=-1,matches=[];
+    const showList=()=>{const t=normName(q.value),dg=q.value.replace(/\D/g,"");
+      matches=t?S.clients.filter(c=>normName(c.name).includes(t)||(dg.length>=3&&phoneDigits(c.phone).includes(dg))).sort((a,b)=>(a.status==="inactive")-(b.status==="inactive")||a.name.localeCompare(b.name,"zh")).slice(0,8):[];
+      const exact=S.clients.some(c=>normName(c.name)===t);
+      list.innerHTML=matches.map((c,i)=>`<button type="button" class="ta-item${i===hi?" on":""}" data-i="${i}" role="option"><b>${esc(c.name)}</b>${prioChip(c.priority)}${stageChip(c.stage)}<span class="hint">${esc(c.phone||"")}${c.status==="inactive"?" · 已停用":""}</span></button>`).join("")
+        +(t&&!exact?`<button type="button" class="ta-item new" data-new="1">＋ 创建新客户「${esc(q.value.trim())}」</button>`:"");
+      list.hidden=!list.innerHTML||sel.value!=="";q.setAttribute("aria-expanded",String(!list.hidden))};
+    const pick=c=>{sel.value=c.id;q.value=c.name;list.hidden=true;ask.hidden=true;r.querySelector("#mfErr").textContent="";syncNew()};
+    const makeNew=()=>{sel.value="__new";list.hidden=true;ask.hidden=true;r.querySelector("#mfErr").textContent="";nw.querySelector("[name=name]").value=q.value.trim();syncNew()};
+    const askNew=()=>{list.hidden=true;const nm=q.value.trim();if(!nm)return;
+      ask.innerHTML=`<span>没有找到「<b>${esc(nm)}</b>」的记录。要创建新客户吗？</span><button type="button" class="btn sm primary" id="mfYes">创建新客户</button><button type="button" class="btn sm" id="mfNo">重新输入</button>`;ask.hidden=false;
+      ask.querySelector("#mfYes").onclick=makeNew;ask.querySelector("#mfNo").onclick=()=>{ask.hidden=true;q.value="";q.focus()}};
+    q.addEventListener("input",()=>{sel.value="";hi=-1;ask.hidden=true;syncNew();showList()});
+    q.addEventListener("focus",()=>{if(!sel.value)showList()});
+    q.addEventListener("keydown",e=>{
+      if(e.key==="ArrowDown"){e.preventDefault();hi=Math.min(hi+1,matches.length-1);showList()}
+      else if(e.key==="ArrowUp"){e.preventDefault();hi=Math.max(hi-1,-1);showList()}
+      else if(e.key==="Enter"){e.preventDefault();if(hi>=0&&matches[hi])pick(matches[hi]);else{const ex=S.clients.find(c=>normName(c.name)===normName(q.value));ex?pick(ex):askNew()}}
+      else if(e.key==="Escape"&&!list.hidden){e.stopPropagation();list.hidden=true}});
+    list.addEventListener("mousedown",e=>{const b=e.target.closest(".ta-item");if(!b)return;e.preventDefault();b.dataset.new?makeNew():pick(matches[+b.dataset.i])});
+    q.addEventListener("blur",()=>setTimeout(()=>{list.hidden=true;if(sel.value||!q.value.trim()||!document.body.contains(q))return;
+      const ex=S.clients.find(c=>normName(c.name)===normName(q.value));ex?pick(ex):askNew()},150));
+    syncNew();
+    f.addEventListener("change",e=>{const n=e.target.name;if(n==="stage"||n==="rstage"||n==="module"){if(n!=="module")f.dataset.st="1";syncMod()}});
+    const delB=r.querySelector("#mfDel");if(delB)delB.onclick=()=>confirmBox("删除会面记录",`确定要删除 ${fmtD(m.date)} 和 ${clientName(m.clientId)} 的会面记录吗？删除后无法恢复。`,"删除",()=>del("meetings",m.id));
+    f.onsubmit=async e=>{e.preventDefault();const d=formData(f),err=r.querySelector("#mfErr");
+      if(!d.clientId){const ex=S.clients.find(c=>normName(c.name)===normName(q.value));
+        if(ex){pick(ex);return err.textContent=`已选好客户「${ex.name}」，请确认阶段和优先级后再按一次保存。`}
+        if(q.value.trim())askNew();else q.focus();return err.textContent=q.value.trim()?"请从名单里选择客户，或确认创建新客户。":"请输入客户名字。"}
+      if(!isDate(d.date))return err.textContent="请填写会面日期。";
+      if(d.start&&d.end&&toMin(d.end)<=toMin(d.start))return err.textContent="结束时间要比开始时间晚。";
+      if(!d.summary)return err.textContent="请写下讨论摘要（一两句就够）。";
+      if(d.nextFollowUp&&!isDate(d.nextFollowUp))return err.textContent="下次跟进日期不正确。";
+      if(d.nextFollowUp&&d.nextFollowUp<d.date)return err.textContent="下次跟进日期不能早于这次会面。";
+      const md=d.module==="recruit"?"recruit":"sales",stg2=md==="recruit"?d.rstage:d.stage;
+      if(!stg2)return err.textContent="请选择这次属于哪个阶段。";
+      let anp=null,pols=1;
+      if(md==="sales"&&stg2==="closing"){anp=num(d.anp);if(d.anp===""||d.anp==null||isNaN(anp)||anp<=0)return err.textContent="选择了 Closing 成交，请填写成交的 ANP（RM）。";
+        pols=d.policies===""||d.policies==null?1:num(d.policies);if(!Number.isInteger(pols)||pols<1||pols>20)return err.textContent="保单张数要是 1 到 20 的整数。"}
+      let cid=d.clientId;
+      try{
+        if(cid==="__new"){const v=validateClient(d);if(v)return err.textContent=v;
+          const dup=findDup(d.name,d.phone);if(dup)return err.innerHTML=`已经有客户「${esc(dup.name)}」，请在上面的名单里选择这位客户，避免重复建立资料。`;
+          cid=newId("clients");const cdat=cleanClient(d);cdat.stage=md==="sales"?stg2:"";cdat.rstage=md==="recruit"?stg2:"";
+          await put("clients",cid,Object.assign(cdat,{firstContact:d.date,createdAt:nowIso(),updatedAt:nowIso(),status:"active"}))}
+        const rec={clientId:cid,date:d.date,start:d.start||"",end:d.end||"",channel:d.channel,module:md,stage:stg2,summary:d.summary,outcome:d.outcome||"",nextAction:d.nextAction||"",nextFollowUp:d.nextFollowUp||"",
+          needs:d.needs||"",concerns:d.concerns||"",objections:d.objections||"",solutions:d.solutions||"",docs:d.docs||"",notes:d.notes||"",updatedAt:nowIso()};
+        const mid=isNew?newId("meetings"):m.id;
+        if(isNew){rec.createdAt=nowIso();if(pre.activityId)rec.activityId=pre.activityId}
+        await (isNew?put("meetings",mid,rec):patch("meetings",mid,rec));
+        const cc=byId("clients",cid)||{};
+        const latest=!cc.lastContact||d.date>=cc.lastContact;
+        const cu={updatedAt:nowIso(),lastContact:latest?d.date:cc.lastContact,priority:d.priority};
+        if(latest){if(md==="sales")cu.stage=stg2;else cu.rstage=stg2;cu.nextAction=d.nextAction||"";cu.nextFollowUp=d.nextFollowUp||"";cu.waitingOn=d.waitingOn||"none";if(d.concerns)cu.concerns=d.concerns;if(d.needs&&!cc.needs)cu.needs=d.needs}
+        if(!cc.firstContact)cu.firstContact=d.date;
+        await patch("clients",cid,cu);
+        if(pre.activityId&&byId("activities",pre.activityId))await patch("activities",pre.activityId,{status:"done",updatedAt:nowIso()});
+        if(isNew&&d.fuTime&&isDate(d.nextFollowUp)&&isTime(d.fuTime)){const s=toMin(d.fuTime);await put("activities",newId("activities"),{title:"跟进："+(cc.name||d.name||""),cat:"client",clientId:cid,date:d.nextFollowUp,start:d.fuTime,end:fromMin(Math.min(s+30,1380)),status:"planned",followUp:d.nextAction||"",location:"",notes:"",createdAt:nowIso(),updatedAt:nowIso()})}
+        if(anp!=null){
+          if(dl0)await patch("deals",dl0.id,{product:d.product||dl0.product||"成交保单",estPremium:anp,premium:anp,policies:pols,updatedAt:nowIso()});
+          else{const did=newId("deals");await put("deals",did,{clientId:cid,product:d.product||"成交保单",ref:"",status:"submitted",expectedMonth:"",submitDate:d.date,approveDate:"",inforceDate:"",estPremium:anp,premium:anp,policies:pols,mbd:null,notes:"",meetingId:mid,createdAt:nowIso(),updatedAt:nowIso()});await patch("meetings",mid,{dealId:did})}}
+        closeModal();toast(anp!=null?`已记录，成交 ${pols} 张保单，ANP ${rm(anp)}`:latest?"已记录，客户资料已更新":"已记录（这是较早的会面，客户目前的阶段不变）");
+        if(S.view==="clients"&&S.clientId!==cid&&pre.cid==null){S.clientId=cid}
+        render();
+      }catch(x){err.textContent=dbErr(x)}};
+  }});
+}
+
+/* ---------- activity form ---------- */
+function activityForm(a,pre={}){
+  const isNew=!a;a=a||Object.assign({cat:pre.cid?"client":"client",date:today(),start:"10:00",end:"11:00",status:"planned",clientId:pre.cid||""},pre);
+  modal(isNew?"新活动":"活动详情",`<form id="af" class="form" novalidate>
+    <div class="full"><div class="seg" role="radiogroup" aria-label="类别">${Object.entries(CATS).map(([k,v])=>`<button type="button" data-cat="${k}" aria-pressed="${a.cat===k}"><span class="dot ${k}"></span> ${v}</button>`).join("")}</div><input type="hidden" name="cat" value="${esc(a.cat)}"></div>
+    <label class="f full" id="afClientW"><span>客户</span><select name="clientId"><option value="">— 不连接客户 —</option>${clientOptions(a.clientId)}</select></label>
+    <label class="f full"><span>标题</span><input type="text" name="title" value="${esc(a.title)}" placeholder="客户会面可留空，会自动用客户名字"></label>
+    <label class="f req"><span>日期</span><input type="date" name="date" value="${esc(a.date)}"></label>
+    <label class="f req"><span>开始</span><input type="time" name="start" min="07:00" max="23:00" value="${esc(a.start)}"></label>
+    <label class="f req"><span>结束</span><input type="time" name="end" min="07:00" max="23:00" value="${esc(a.end)}"></label>
+    <label class="f"><span>状态</span><select name="status">${opts(ACT_ST,a.status)}</select></label>
+    <details class="full" ${a.location||a.notes||a.followUp?"open":""}><summary>地点、备注、跟进事项</summary><div class="form" style="margin-top:10px">
+      <label class="f full"><span>地点</span><input type="text" name="location" value="${esc(a.location)}"></label>
+      <label class="f full"><span>说明 / 备注</span><textarea name="notes">${esc(a.notes)}</textarea></label>
+      <label class="f full"><span>跟进事项</span><input type="text" name="followUp" value="${esc(a.followUp)}"></label></div></details>
+    <div class="err full" id="afErr"></div>
+    <div class="modal-f full">${isNew?"":`<button type="button" class="btn danger" id="afDel" style="margin-right:auto">删除</button>`}${!isNew&&a.cat==="client"&&a.clientId?`<button type="button" class="btn" id="afMeet">完成并记录会面</button>`:""}<button type="button" class="btn" data-act="closeModal">取消</button><button class="btn primary" type="submit" id="afSave">保存</button></div></form>`,{onMount:r=>{
+    const f=r.querySelector("#af"),cw=r.querySelector("#afClientW");let conflictOk=false;
+    const syncCat=()=>{cw.hidden=f.cat.value!=="client";r.querySelectorAll("[data-cat]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.cat===f.cat.value))};
+    r.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{f.cat.value=b.dataset.cat;syncCat()});syncCat();
+    f.start.onchange=()=>{const s=toMin(f.start.value),e=toMin(f.end.value);if(s!=null&&(e==null||e<=s))f.end.value=fromMin(Math.min(s+60,1380));conflictOk=false};
+    f.end.onchange=f.date.onchange=()=>{conflictOk=false};
+    const delB=r.querySelector("#afDel");if(delB)delB.onclick=()=>confirmBox("删除活动",`确定删除「${a.title}」吗？如果只是不去了，可以把状态改成「已取消」，记录会保留在报告里。`,"删除",()=>del("activities",a.id));
+    const meetB=r.querySelector("#afMeet");if(meetB)meetB.onclick=()=>{closeModal();meetingForm(null,{cid:a.clientId,date:a.date,start:a.start,end:a.end,activityId:a.id})};
+    f.onsubmit=async e=>{e.preventDefault();const d=formData(f),err=r.querySelector("#afErr");
+      if(d.cat!=="client")d.clientId="";
+      if(!d.title&&d.cat==="client"&&d.clientId)d.title="会面："+clientName(d.clientId);
+      if(!d.title)return err.textContent="请填写标题。";
+      if(!isDate(d.date))return err.textContent="请填写日期。";
+      const s=toMin(d.start),en=toMin(d.end);
+      if(s==null||en==null)return err.textContent="请填写开始和结束时间。";
+      if(en<=s)return err.textContent="结束时间要比开始时间晚。";
+      if(s<420||en>1380)return err.textContent="日历只显示 07:00 到 23:00，请把时间放在这个范围内。";
+      if(d.status!=="cancelled"&&!conflictOk){
+        const clash=S.activities.filter(x=>x.id!==a.id&&x.date===d.date&&x.status!=="cancelled"&&toMin(x.start)!=null&&toMin(x.start)<en&&(toMin(x.end)??toMin(x.start)+30)>s);
+        if(clash.length){conflictOk=true;err.innerHTML=`时间冲突：${clash.map(x=>`「${esc(x.title)}」${esc(x.start)}–${esc(x.end)}`).join("、")}。如果确定要重叠，请再按一次「保存」。`;r.querySelector("#afSave").textContent="仍然保存";return}}
+      const rec={title:d.title,cat:d.cat,clientId:d.clientId||"",date:d.date,start:d.start,end:d.end,status:d.status,location:d.location||"",notes:d.notes||"",followUp:d.followUp||"",updatedAt:nowIso()};
+      if(!isNew&&(a.date!==d.date||a.start!==d.start)&&a.status==="planned"&&d.status==="planned"){rec.rescheduledCount=(a.rescheduledCount||0)+1;rec.originalDate=a.originalDate||a.date}
+      try{const wasDone=a.status==="done";
+        if(isNew){rec.createdAt=nowIso();await put("activities",newId("activities"),rec)}else await patch("activities",a.id,rec);
+        closeModal();toast(rec.rescheduledCount?"已改期":"已保存");
+        if(!isNew&&!wasDone&&d.status==="done"&&d.cat==="client"&&d.clientId){meetingForm(null,{cid:d.clientId,date:d.date,start:d.start,end:d.end,activityId:a.id})}
+      }catch(x){err.textContent=dbErr(x)}};
+  }});
+}
+
+/* ---------- deal form ---------- */
+function dealForm(dl,pre={}){
+  const isNew=!dl;dl=dl||{status:"agreed",clientId:pre.cid||""};
+  modal(isNew?"新增保单 / 成交":"编辑保单",`<form id="df" class="form" novalidate>
+    <label class="f req full"><span>客户</span><select name="clientId"><option value="">— 选择客户 —</option>${clientOptions(dl.clientId)}</select></label>
+    <label class="f req"><span>产品 / 计划</span><input type="text" name="product" value="${esc(dl.product)}"></label>
+    <label class="f"><span>投保书 / 保单号码</span><input type="text" name="ref" value="${esc(dl.ref)}"></label>
+    <label class="f req"><span>状态</span><select name="status">${opts(DEAL_ST,dl.status)}</select></label>
+    <label class="f"><span>预估年缴保费（RM）</span><input type="number" min="0" name="estPremium" value="${esc(dl.estPremium??"")}"></label>
+    <label class="f"><span>预计成交月份</span><input type="month" name="expectedMonth" value="${esc(dl.expectedMonth)}"></label>
+    <label class="f"><span>提交日期</span><input type="date" name="submitDate" value="${esc(dl.submitDate)}"></label>
+    <label class="f"><span>批准日期</span><input type="date" name="approveDate" value="${esc(dl.approveDate)}"></label>
+    <label class="f"><span>生效日期</span><input type="date" name="inforceDate" value="${esc(dl.inforceDate)}"></label>
+    <label class="f"><span>MBD（RM，公司确认后填写）</span><input type="number" min="0" name="mbd" value="${esc(dl.mbd??"")}"></label>
+    <label class="f"><span>确认保费（RM）</span><input type="number" min="0" name="premium" value="${esc(dl.premium??"")}"></label>
+    <label class="f full"><span>备注（待补文件、核保情况等）</span><textarea name="notes">${esc(dl.notes)}</textarea></label>
+    ${S.settings.mbdRule?`<div class="hint full">你的 MBD 规则：${esc(S.settings.mbdRule)}</div>`:""}
+    <div class="err full" id="dfErr"></div>
+    <div class="modal-f full">${isNew?"":`<button type="button" class="btn danger" id="dfDel" style="margin-right:auto">删除</button>`}<button type="button" class="btn" data-act="closeModal">取消</button><button class="btn primary" type="submit">保存</button></div></form>`,{onMount:r=>{
+    const f=r.querySelector("#df");
+    const delB=r.querySelector("#dfDel");if(delB)delB.onclick=()=>confirmBox("删除保单记录",`确定删除「${dl.product}」这份保单记录吗？报告里的数字会跟着改变。`,"删除",()=>del("deals",dl.id));
+    f.onsubmit=async e=>{e.preventDefault();const d=formData(f),err=r.querySelector("#dfErr");
+      if(!d.clientId)return err.textContent="请选择客户。";if(!d.product)return err.textContent="请填写产品名称。";
+      for(const k of ["estPremium","mbd","premium"])if(d[k]!==""&&(isNaN(num(d[k]))||num(d[k])<0))return err.textContent="金额必须是数字。";
+      if(["submitted","underwriting","approved","inforce"].includes(d.status)&&!isDate(d.submitDate))return err.textContent="这个状态需要填写提交日期。";
+      if(d.status==="inforce"&&!isDate(d.inforceDate))return err.textContent="「已生效」需要填写生效日期，报告才会按正确的月份计入。";
+      if(d.inforceDate&&d.submitDate&&d.inforceDate<d.submitDate)return err.textContent="生效日期不能早于提交日期。";
+      const rec={clientId:d.clientId,product:d.product,ref:d.ref||"",status:d.status,expectedMonth:d.expectedMonth||"",submitDate:d.submitDate||"",approveDate:d.approveDate||"",inforceDate:d.inforceDate||"",
+        estPremium:d.estPremium===""?null:num(d.estPremium),mbd:d.mbd===""?null:num(d.mbd),premium:d.premium===""?null:num(d.premium),notes:d.notes||"",updatedAt:nowIso()};
+      try{if(isNew){rec.createdAt=nowIso();await put("deals",newId("deals"),rec)}else await patch("deals",dl.id,rec);
+        closeModal();toast(rec.mbd!=null&&mbdBasis()==="inforce"&&rec.status!=="inforce"?"已保存。MBD 会在保单生效后才计入报告":"已保存")}catch(x){err.textContent=dbErr(x)}};
+  }});
+}
+
+/* ---------- AI ---------- */
+function clientDossier(c){
+  const ms=meetingsOf(c.id),deals=S.deals.filter(d=>d.clientId===c.id);
+  const L=[`今天日期：${today()}`,`客户姓名：${c.name}`,`年龄：${ageOf(c.dob)??"未记录"}`,`职业：${c.occupation||"未记录"}`,`月薪：${c.income!=null&&c.income!==""?rm(c.income):"未记录"}`,`性别：${GENDER[c.gender||""]}`,`是否吸烟：${SMOKER[c.smoker||""]}`,`婚姻状况：${MARITAL[c.marital||""]}`,`需要照顾的家人：${c.dependents!=null&&c.dependents!==""?c.dependents+" 人":"未记录"}`,
+    `沟通语言：${LANGS[c.lang]||"中文"}`,`优先级：${c.priority||"未设定"}`,`目前销售阶段：${stageName(c.stage)}`,`首次接触：${c.firstContact||"未记录"}`,`最近联系：${c.lastContact||"未记录"}`,
+    `下次跟进：${c.nextFollowUp||"未设定"}`,`下一步行动：${c.nextAction||"未记录"}`,`目前在等：${WAITING[c.waitingOn||"none"]}`,`保险需求：${c.needs||"未记录"}`,`现有保障与缺口：${c.coverage||"未记录"}`,`未解决顾虑：${c.concerns||"未记录"}`,`备注：${c.notes||"无"}`,"",`会面记录（由早到晚，共 ${ms.length} 次）：`];
+  ms.forEach((m,i)=>L.push(`#${i+1} ${m.date} ${CHANNELS[m.channel]||""} 阶段=${m.module==="recruit"?"招聘·"+rstageName(m.stage):stageName(m.stage)}\n讨论：${m.summary||""}\n需求：${m.needs||""}\n顾虑：${m.concerns||""}\n异议/延迟：${m.objections||""}\n方案：${m.solutions||""}\n文件：${m.docs||""}\n结果：${m.outcome||""}\n下一步：${m.nextAction||""}\n下次跟进：${m.nextFollowUp||""}\n备注：${m.notes||""}`));
+  L.push("",`保单记录（${deals.length}）：`);deals.forEach(d=>L.push(`- ${d.product}｜${DEAL_ST[d.status]}｜预估保费 ${d.estPremium??"未填"}｜提交 ${d.submitDate||"-"}｜生效 ${d.inforceDate||"-"}｜备注 ${d.notes||""}`));
+  return L.join("\n").slice(0,60000);
+}
+async function aiSummary(id){
+  const c=byId("clients",id);if(!c||!sample)return;
+  const out=document.getElementById("ai-out");out.innerHTML=`<div class="empty">AI 正在阅读 ${meetingsOf(id).length} 次会面记录…（第一次使用会先请你允许）</div>`;
+  const prompt=`你是马来西亚保险顾问 SIM 的助理。请只根据下面的客户记录，用简体中文写客户摘要和下一步建议。
+规则：
+- 只使用记录里有的内容。不要编造客户说过的话、财务数字、会面结果或购买意愿。记录里没有的就写「记录中没有」。
+- 建议要具体，针对这位客户的实际记录，并说明原因。
+- 如果记录显示优先级或阶段可能需要调整，在 suggest_* 里提出（只是建议，不会自动修改）；不需要就填 null。
+- 不要承诺核保或理赔结果。
+只回复一个 JSON 对象，格式：
+{"background":"背景与需求","history":["每次互动一句"],"presented":["已讲解的方案"],"concerns":["顾虑与异议"],"preferences":"偏好与预算","outstanding":["未解决的事项"],"latest":"最近一次互动与结果","next_followup":"下次跟进安排","recommendations":[{"action":"具体行动","reason":"原因"}],"missing_info":["还缺少的资料"],"suggest_priority":"A|B|C|null","suggest_stage":"prospect|open|present|followup|closing|null","suggest_reason":"原因"}
+
+客户记录：
+${clientDossier(c)}`;
+  try{const data=await sample.json(prompt,{modelTier:"default"});
+    if(!data||typeof data!=="object")throw{code:"invalid_json"};
+    await put("summaries",id,{data,generatedAt:nowIso(),meetingCount:meetingsOf(id).length});toast("摘要已更新");
+  }catch(e){out.innerHTML=`<div class="err">${esc(SAMPLE_ERR[e&&e.code]||dbErr(e))}</div>`}
+}
+async function draftOne(id){
+  const c=byId("clients",id);if(!c)return;
+  if(!sample){toast("AI 功能需要在 claude.ai 中打开页面才能使用");return}
+  if(!c.phone)toast("这位客户没有电话号码，草稿生成后只能复制文字");
+  toast("正在生成草稿…");
+  const lang={zh:"简体中文（马来西亚华人口语，自然亲切）",en:"English (Malaysian, warm and simple)",ms:"Bahasa Melayu (mesra dan ringkas)"}[c.lang||"zh"];
+  const prompt=`你是马来西亚保险顾问 SIM 的助理。请为下面的客户写一条 WhatsApp 跟进讯息草稿，由 SIM 本人发送。
+要求：语言用 ${lang}；2 到 4 句，可以直接发送；以关心和服务为主，不要施压，不要用表情符号；不要承诺核保、理赔或回报；只提到记录里有的事情，不要编造；称呼用客户名字。
+只回复一个 JSON：{"text":"讯息内容","reason":"为什么现在跟进（中文一句）"}
+
+客户记录：
+${clientDossier(c).slice(0,20000)}`;
+  try{const r=await sample.json(prompt,{modelTier:"default",cache:false});
+    if(!r||!r.text)throw{code:"invalid_json"};
+    await put("drafts",newId("drafts"),{clientId:id,text:String(r.text),reason:String(r.reason||""),status:"pending",source:"app",createdAt:nowIso()});
+    toast("草稿已放进「每日助理」等你批准");S.view="agent";S.clientId=null;render();
+  }catch(e){toast(SAMPLE_ERR[e&&e.code]||"生成失败，请再试一次")}
+}
+
+/* ---------- backup / restore ---------- */
+async function backup(){
+  const data={exportedAt:nowIso(),app:"pangkor-sales-assistant",version:1,settings:S.settings};
+  for(const c of ["clients","meetings","activities","deals","drafts"])data[c]=S[c];
+  if(!downloads){
+    if(S.dbState!=="local")return;
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:"application/json"}));
+    a.download=`baoxian-backup-${today()}.json`;document.body.appendChild(a);a.click();a.remove();toast("备份已下载");return;
+  }
+  try{await downloads.save({filename:`pangkor-crm-backup-${today()}.json`,data:JSON.stringify(data,null,1)});toast("备份已下载")}catch(e){if(e&&e.code!=="cancelled")toast("下载没有完成")}
+}
+function restoreFrom(file){
+  const rd=new FileReader();
+  rd.onload=()=>{let data;try{data=JSON.parse(rd.result)}catch(e){toast("这个文件不是有效的备份");return}
+    if(!data||data.app!=="pangkor-sales-assistant"){toast("这个文件不是本系统的备份");return}
+    const n=["clients","meetings","activities","deals"].map(c=>(data[c]||[]).length);
+    confirmBox("从备份恢复",`备份时间：${fmtDT(data.exportedAt)}\n客户 ${n[0]} 位，会面 ${n[1]} 条，活动 ${n[2]} 个，保单 ${n[3]} 份。\n\n相同编号的记录会被备份里的版本覆盖；备份里没有的现有记录会保留。`,"开始恢复",async()=>{
+      for(const c of ["clients","meetings","activities","deals","drafts"])for(const row of (data[c]||[])){if(!row||!row.id)continue;const {id,...rest}=row;await put(c,id,rest)}
+      if(data.settings)await db.doc("settings/main").set(data.settings);toast("恢复完成")})};
+  rd.readAsText(file);
+}
+
+/* ---------- actions ---------- */
+const A={
+  go:d=>{S.view=d.v;S.clientId=null;try{history.replaceState(null,"","#"+d.v)}catch(e){}render();window.scrollTo(0,0)},
+  openClient:d=>{if(!d.id)return;S.view="clients";S.clientId=d.id;render();window.scrollTo(0,0)},
+  backClients:()=>{S.clientId=null;render()},
+  toggleMeet:d=>{S.meetOpen.has(d.id)?S.meetOpen.delete(d.id):S.meetOpen.add(d.id);render()},
+  newClient:()=>clientForm(null),
+  editClient:d=>clientForm(byId("clients",d.id)),
+  newMeeting:d=>meetingForm(null,{cid:d.cid||(S.view==="clients"?S.clientId:"")||"",ch:d.ch}),
+  editMeeting:d=>meetingForm(byId("meetings",d.id)),
+  newActivity:d=>activityForm(null,d.cid?{cid:d.cid,clientId:d.cid,cat:"client"}:{date:S.view==="calendar"&&S.calMode==="day"?S.calDay:today()}),
+  editActivity:(d,_,e)=>{e.preventDefault();const a=byId("activities",d.id);if(a)activityForm(a)},
+  newDeal:d=>dealForm(null,{cid:d.cid}),
+  editDeal:d=>dealForm(byId("deals",d.id)),
+  closeModal:()=>closeModal(),
+  calMode:d=>{S.calMode=d.m;if(d.m==="week")S.weekStart=mondayOf(S.calDay);render()},
+  calDay:d=>{S.calDay=d.d;S.calMode="day";render()},
+  calNav:d=>{const n=+d.n;if(n===0){S.calDay=today();S.weekStart=mondayOf(today())}else if(S.calMode==="week"){S.weekStart=addDays(S.weekStart,7*n);S.calDay=S.weekStart}else{S.calDay=addDays(S.calDay,n);S.weekStart=mondayOf(S.calDay)}render()},
+  clientP:d=>{S.clientP=d.p;render()},
+  repMode:d=>{S.repMode=d.m;render()},
+  repNav:d=>{const n=+d.n;if(n===0)S.repAnchor=today();else if(S.repMode==="week")S.repAnchor=addDays(S.repAnchor,7*n);else{const x=parseD(S.repAnchor.slice(0,7)+"-01");x.setMonth(x.getMonth()+n);S.repAnchor=ymd(x)}render()},
+  copyReport:async()=>{const t=reportText();try{await navigator.clipboard.writeText(t);toast("已复制，可以贴到 WhatsApp")}catch(e){modal("报告文字",`<textarea rows="16" id="rt">${esc(t)}</textarea><div class="hint">请长按或全选后复制。</div>`,{onMount:r=>{const x=r.querySelector("#rt");x.select()}})}},
+  reschedule:d=>{const c=byId("clients",d.id);if(!c)return;modal("改期跟进："+c.name,`<form id="rf" class="form"><label class="f req"><span>新的跟进日期</span><input type="date" name="d" value="${esc(c.nextFollowUp||addDays(today(),1))}"></label><label class="f full"><span>下一步行动</span><input type="text" name="a" value="${esc(c.nextAction)}"></label><div class="err full" id="rfErr"></div><div class="modal-f full"><button type="button" class="btn" data-act="closeModal">取消</button><button class="btn primary">保存</button></div></form>`,{onMount:r=>{const f=r.querySelector("#rf");f.onsubmit=async e=>{e.preventDefault();const x=formData(f);if(!isDate(x.d))return r.querySelector("#rfErr").textContent="请选择日期。";if(x.d<today())return r.querySelector("#rfErr").textContent="新日期不能是过去的日子。";try{await patch("clients",c.id,{nextFollowUp:x.d,nextAction:x.a||"",updatedAt:nowIso()});closeModal();toast("已改期到 "+fmtD(x.d))}catch(y){r.querySelector("#rfErr").textContent=dbErr(y)}}}})},
+  aiSummary:d=>aiSummary(d.id),
+  draftOne:d=>draftOne(d.id),
+  applySuggest:d=>{const c=byId("clients",d.id);if(!c)return;const label=d.f==="priority"?`优先级从 ${c.priority||"未设定"} 改为 ${d.v}`:`阶段从「${stageName(c.stage)}」改为「${stageName(d.v)}」`;
+    confirmBox("确认修改",`${c.name}：${label}\n\n这是 AI 的建议，请确认它符合你对客户的判断。`,"确认修改",()=>patch("clients",c.id,{[d.f]:d.v,updatedAt:nowIso()}))},
+  approveDraft:(d,el,e)=>{const tx=document.getElementById("dt_"+d.id);const text=tx?tx.value:"";const c=byId("drafts",d.id)&&byId("clients",byId("drafts",d.id).clientId);
+    if(c)el.href=`https://wa.me/${phoneDigits(c.phone)}?text=${encodeURIComponent(text)}`;
+    patch("drafts",d.id,{status:"approved",text,decidedAt:nowIso()}).then(()=>toast("已批准，请在 WhatsApp 按发送")).catch(x=>toast(dbErr(x)))},
+  copyDraft:async d=>{const tx=document.getElementById("dt_"+d.id);try{await navigator.clipboard.writeText(tx.value);toast("已复制")}catch(e){tx.select();toast("请按复制")}},
+  saveDraft:d=>{const tx=document.getElementById("dt_"+d.id);patch("drafts",d.id,{text:tx.value}).then(()=>toast("已保存")).catch(x=>toast(dbErr(x)))},
+  skipDraft:d=>patch("drafts",d.id,{status:"skipped",decidedAt:nowIso()}).then(()=>toast("已跳过")).catch(x=>toast(dbErr(x))),
+  backup:()=>backup(),
+  clearExamples:()=>confirmBox("清除示例资料","这会删除所有标着「示例」的客户、会面、活动、保单和草稿。你自己输入的资料不受影响。","清除",async()=>{
+    for(const c of ["meetings","activities","deals","drafts","clients"])for(const r of S[c].filter(x=>x.example))await del(c,r.id);
+    for(const id of Object.keys(S.summaries))if(!byId("clients",id))await del("summaries",id);toast("示例资料已清除")}),
+  deleteClient:d=>{const c=byId("clients",d.id);if(!c)return;const nm=meetingsOf(c.id).length,nd=S.deals.filter(x=>x.clientId===c.id).length;
+    confirmBox("删除客户",`删除「${c.name}」会同时永久删除 ${nm} 条会面记录和 ${nd} 份保单记录，无法恢复。\n\n如果只是不再跟进，建议改为 C 级或「停用」，所有记录会保留。`,"永久删除",async()=>{
+      for(const m of meetingsOf(c.id))await del("meetings",m.id);for(const x of S.deals.filter(x=>x.clientId===c.id))await del("deals",x.id);
+      for(const x of S.drafts.filter(x=>x.clientId===c.id))await del("drafts",x.id);if(S.summaries[c.id])await del("summaries",c.id);
+      await del("clients",c.id);S.clientId=null;toast("已删除")},{typeToConfirm:c.name})}
+};
+document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b||b.hasAttribute("disabled"))return;const fn=A[b.dataset.act];if(fn){if(b.tagName!=="A")e.preventDefault();fn(b.dataset,b,e)}});
+document.addEventListener("input",e=>{
+  if(e.target.id==="clientQ"){S.clientQ=e.target.value;const pos=e.target.selectionStart;render();const i=document.getElementById("clientQ");i.focus();i.setSelectionRange(pos,pos)}
+  if(e.target.id==="meetQ"){S.meetQ=e.target.value;const pos=e.target.selectionStart;render();const i=document.getElementById("meetQ");i.focus();i.setSelectionRange(pos,pos)}
+});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.id==="clientStage"){S.clientStage=t.value;render()}
+  if(t.id==="clientInactive"){S.clientShowInactive=t.checked;render()}
+  if(t.id==="fuC"){S.fuIncludeC=t.checked;render()}
+  if(t.id==="pipeC"){S.pipeShowC=t.checked;render()}
+  if(t.dataset.stageFor){patch("clients",t.dataset.stageFor,{stage:t.value,updatedAt:nowIso()}).then(()=>toast("已移到「"+stageName(t.value)+"」")).catch(x=>toast(dbErr(x)))}
+  if(t.id==="restoreFile"&&t.files[0]){restoreFrom(t.files[0]);t.value=""}
+});
+document.addEventListener("submit",async e=>{
+  if(e.target.id!=="settingsForm")return;e.preventDefault();const d=formData(e.target),err=document.getElementById("settingsErr");
+  const w={};for(const k of OPEN_DEAL){const v=d["w_"+k];if(v===""){w[k]=null;continue}const n=num(v);if(isNaN(n)||n<0||n>100){err.textContent="权重要在 0 到 100 之间。";return}w[k]=n}
+  try{await db.doc("settings/main").set({mbdRule:d.mbdRule||"",mbdBasis:d.mbdBasis,weatherLoc:WLOC[d.weatherLoc]?d.weatherLoc:"pangkor",weights:w,updatedAt:nowIso()});err.textContent="";toast("设置已保存")}catch(x){err.textContent=dbErr(x)}
+});
+setInterval(()=>{if(S.view==="calendar"&&!document.getElementById("ov"))schedule()},60000);
+
+render();connect();
+})();
+</script>
+
+</body>
+</html>

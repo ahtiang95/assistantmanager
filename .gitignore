@@ -1,0 +1,5 @@
+# personal guide that links to the private claude.ai version
+使用指南.md
+# any exported client backups must never be committed
+*backup*.json
+.claude/
