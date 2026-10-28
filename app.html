@@ -120,6 +120,7 @@ h3{font-size:14px;margin:0;font-weight:700}
 .mod-pick svg{width:20px;height:20px}
 .close-box{background:var(--ok-bg);border-radius:12px;padding:12px;display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .close-box .hint{grid-column:1/-1}
+.ai-master{background:#e3f2f5;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .chip.ex{border:1px dashed var(--muted);background:none}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
 .dot.client{background:var(--c-client)}.dot.work{background:var(--c-work)}.dot.personal{background:var(--c-personal)}
@@ -726,9 +727,9 @@ function vClient(){
   <div class="head"><div><div class="row">${prioChip(c.priority)}${STAGE_IDX[c.stage]!=null?stageChip(c.stage):""}${rChip(c.rstage)}${c.status==="inactive"?'<span class="chip">已停用</span>':""}${exChip(c)}</div><h1>${esc(c.name)}</h1>
     <div class="sub">${c.phone?esc(c.phone)+" · ":""}${age!=null?age+" 岁 · ":""}${esc(c.occupation||"")}</div></div>
     <div class="row"><button class="btn primary" data-act="newMeeting" data-cid="${c.id}">＋ 记录会面</button><button class="btn" data-act="newActivity" data-cid="${c.id}">＋ 约见</button><button class="btn" data-act="newDeal" data-cid="${c.id}">＋ 保单</button><button class="btn" data-act="draftOne" data-id="${c.id}">WhatsApp 草稿</button><button class="btn" data-act="editClient" data-id="${c.id}">编辑资料</button></div></div>
-  <section class="panel"><div class="panel-h"><h2 class="ttl">${ic("agent")}AI 客户摘要与下一步建议</h2>
-    <button class="btn sm" data-act="aiSummary" data-id="${c.id}" ${sample?"":"disabled"}>${sum?"重新生成":"生成摘要"}</button></div>
-    <div id="ai-out">${sum?renderSummary(c,sum):`<div class="empty">${sample?"根据已记录的会面内容生成摘要。AI 只会用你记录的资料，不会编造。":"AI 功能需要在 claude.ai 中打开页面才能使用。"}</div>`}</div></section>
+  <section class="panel"><div class="panel-h"><h2 class="ttl">${ic("agent")}AI 大师：客户分析与建议</h2>
+    <button class="btn sm" data-act="aiSummary" data-id="${c.id}" ${sample?"":"disabled"}>${sum?"请 AI 大师重新分析":"请 AI 大师分析"}</button></div>
+    <div id="ai-out">${sum?renderSummary(c,sum):`<div class="empty">${sample?"AI 大师会读这位客户的全部资料和会面记录，分析情况并给你下一步建议。只用你记录的资料，不会编造。":"AI 大师只在 claude.ai 版本可以使用。"}</div>`}</div></section>
   <div class="grid">
     <section class="panel"><h2 class="ttl">${ic("followups")}下次跟进</h2>
       <dl class="dl">${f("日期",isDate(c.nextFollowUp)?fmtD(c.nextFollowUp)+" "+fuStatus(c):'<span class="chip warn">未设定</span>')}${f("下一步行动",esc(c.nextAction))}${f("目前在等",WAITING[c.waitingOn||"none"])}${f("未解决的顾虑",esc(c.concerns))}</dl></section>
@@ -1090,22 +1091,19 @@ function meetingForm(m,pre={}){
     <div class="full close-box" id="mfClose">
       <label class="f req"><span>成交 ANP（RM）</span><input type="number" name="anp" min="0" step="1" value="${esc(dl0?(dl0.premium??dl0.estPremium??""):"")}" placeholder="例如 3600"></label>
       <label class="f"><span>成交保单张数</span><input type="number" name="policies" min="1" max="20" step="1" value="${esc(dl0?(dl0.policies||1):1)}"></label>
-      <label class="f"><span>产品 / 计划（选填）</span><input type="text" name="product" value="${esc(dl0?dl0.product:"")}"></label>
+      <label class="f"><span>产品 / 计划（选填）</span><input type="text" name="product" list="prodList" autocomplete="off" value="${esc(dl0?dl0.product:"")}" placeholder="${productList().length?"点一下选择之前填过的产品":""}"></label>
       <div class="hint">保存后会自动在「保单 / 成交」记录一笔，按这次会面日期计入当周的成交保单和 NB（ANP）。${dl0?"这次会面已经有成交记录，修改会更新那一笔。":""}</div></div>
     <label class="f"><span>会后优先级</span><select name="priority" id="mfPrio">${opts(PRIOS,(c&&c.priority)||"B")}</select></label>
-    <label class="f full req"><span>讨论摘要</span><textarea name="summary" id="mfSummary" placeholder="${esc(STAGE_HINTS[stage])}">${esc(m.summary)}</textarea></label>
+    <label class="f full"><span>讨论摘要（选填）</span><textarea name="summary" id="mfSummary" placeholder="${esc(STAGE_HINTS[stage])}">${esc(m.summary)}</textarea></label>
     <label class="f full"><span>结果</span><input type="text" name="outcome" value="${esc(m.outcome)}" placeholder="例如：客户想先和太太商量"></label>
     <label class="f full"><span>下一步行动</span><input type="text" name="nextAction" value="${esc(m.nextAction)}" placeholder="例如：发修改后的方案给客户"></label>
     <label class="f"><span>下次跟进日期</span><input type="date" name="nextFollowUp" value="${esc(m.nextFollowUp)}"></label>
     <label class="f"><span>目前在等</span><select name="waitingOn">${opts(WAITING,(c&&c.waitingOn)||"none")}</select></label>
     ${isNew?`<label class="f"><span>把跟进加入日历（时间）</span><input type="time" name="fuTime" placeholder="不填 = 不加入"></label>`:""}
-    <details class="full"><summary>更多细节（需求、顾虑、方案、文件）</summary><div class="form" style="margin-top:10px">
-      <label class="f full"><span>客户的保险需求</span><textarea name="needs">${esc(m.needs)}</textarea></label>
-      <label class="f full"><span>客户的问题与顾虑</span><textarea name="concerns">${esc(m.concerns)}</textarea></label>
-      <label class="f full"><span>异议 / 延迟决定的原因</span><textarea name="objections">${esc(m.objections)}</textarea></label>
-      <label class="f full"><span>讨论过的保险方案</span><textarea name="solutions">${esc(m.solutions)}</textarea></label>
-      <label class="f full"><span>提供的文件或建议书</span><input type="text" name="docs" value="${esc(m.docs)}"></label>
-      <label class="f full"><span>其他备注</span><textarea name="notes">${esc(m.notes)}</textarea></label></div></details>
+    <div class="full ai-master"><div class="row" style="justify-content:space-between"><b class="ttl">${ic("agent")}AI 大师</b>
+      <button type="button" class="btn sm primary" id="mfAI" ${sample?"":"disabled"}>分析这位客户并给建议</button></div>
+      <div id="mfAIout" class="hint">${sample?"AI 大师会读这位客户的全部资料、所有会面记录和保单，加上你这次填写的内容，分析客户情况并给你下一步建议。":"AI 大师只在 claude.ai 版本可以使用。"}</div></div>
+    <datalist id="prodList">${productList().map(p=>`<option value="${esc(p)}"></option>`).join("")}</datalist>
     <div class="err full" id="mfErr"></div>
     <div class="modal-f full">${isNew?"":`<button type="button" class="btn danger" id="mfDel" style="margin-right:auto">删除</button>`}<button type="button" class="btn" data-act="closeModal">取消</button><button class="btn primary" type="submit">保存</button></div></form>`,{wide:true,onMount:r=>{
     const f=r.querySelector("#mf"),sel=r.querySelector("#mfClient"),nw=r.querySelector("#mfNew"),stg=r.querySelector("#mfStage"),sm=r.querySelector("#mfSummary");
@@ -1143,6 +1141,23 @@ function meetingForm(m,pre={}){
       const ex=S.clients.find(c=>normName(c.name)===normName(q.value));ex?pick(ex):askNew()},150));
     syncNew();
     f.addEventListener("change",e=>{const n=e.target.name;if(n==="priority")f.dataset.pr="1";if(n==="stage"||n==="rstage"||n==="module"){if(n!=="module")f.dataset.st="1";syncMod()}});
+    const aiB=r.querySelector("#mfAI");if(aiB)aiB.onclick=async()=>{
+      const out=r.querySelector("#mfAIout"),d=formData(f),cid=sel.value,nmNew=(nw.querySelector("[name=name]")||{}).value;
+      let c=cid&&cid!=="__new"?byId("clients",cid):null;
+      if(!c&&cid==="__new"&&nmNew)c={name:nmNew,dob:d.dob,occupation:d.occupation,income:d.income===""?null:num(d.income),gender:d.gender,smoker:d.smoker,marital:d.marital,dependents:d.dependents===""?null:num(d.dependents),lang:d.lang,priority:d.priority,stage:"",nextFollowUp:"",nextAction:""};
+      if(!c){out.textContent="请先在上面选好客户，或确认创建新客户。";return}
+      const md=d.module==="recruit"?"recruit":"sales",stg=md==="recruit"?rstageName(d.rstage):stageName(d.stage);
+      const extra=[`日期：${d.date||"未填"}`,`方式：${CHANNELS[d.channel]||""}`,`模块：${md==="recruit"?"招聘":"个人销售"}`,`阶段：${stg}`,`讨论摘要：${d.summary||"未填"}`,`结果：${d.outcome||"未填"}`,`下一步：${d.nextAction||"未填"}`,`下次跟进：${d.nextFollowUp||"未填"}`,d.anp?`成交 ANP：RM ${d.anp}，${d.policies||1} 张，产品：${d.product||"未填"}`:""].filter(Boolean).join("\n");
+      aiB.disabled=true;out.className="";out.innerHTML=`<div class="empty">AI 大师正在分析「${esc(c.name)}」…（第一次使用会先请你允许）</div>`;
+      try{const data=await sample.json(masterPrompt(c,extra),{modelTier:"default"});
+        if(!data||typeof data!=="object")throw{code:"invalid_json"};
+        const shown=Object.assign({},data,{suggest_priority:null,suggest_stage:null});
+        const sum={data,generatedAt:nowIso(),meetingCount:c.id?meetingsOf(c.id).length:0};
+        if(!document.body.contains(out))return;
+        out.innerHTML=renderSummary(c.id?c:Object.assign({id:"",updatedAt:""},c),Object.assign({},sum,{data:shown})).replace('<div class="ai-box">','<div class="ai-box" style="background:var(--surface)">');
+        if(c.id)put("summaries",c.id,sum).catch(()=>{});
+      }catch(e){if(document.body.contains(out))out.innerHTML=`<div class="err">${esc(SAMPLE_ERR[e&&e.code]||"AI 大师暂时没有回应，请再试一次。")}</div>`}
+      finally{aiB.disabled=false}};
     const delB=r.querySelector("#mfDel");if(delB)delB.onclick=()=>confirmBox("删除会面记录",`确定要删除 ${fmtD(m.date)} 和 ${clientName(m.clientId)} 的会面记录吗？删除后无法恢复。`,"删除",()=>del("meetings",m.id));
     f.onsubmit=async e=>{e.preventDefault();const d=formData(f),err=r.querySelector("#mfErr");
       if(!d.clientId){const nm=q.value.trim();
@@ -1152,7 +1167,6 @@ function meetingForm(m,pre={}){
         askNew(true);ask.scrollIntoView({block:"center"});return err.textContent=`「${nm}」是新客户吗？请按上面的「创建新客户并保存」。`}
       if(!isDate(d.date))return err.textContent="请填写会面日期。";
       if(d.start&&d.end&&toMin(d.end)<=toMin(d.start))return err.textContent="结束时间要比开始时间晚。";
-      if(!d.summary)return err.textContent="请写下讨论摘要（一两句就够）。";
       if(d.nextFollowUp&&!isDate(d.nextFollowUp))return err.textContent="下次跟进日期不正确。";
       if(d.nextFollowUp&&d.nextFollowUp<d.date)return err.textContent="下次跟进日期不能早于这次会面。";
       const md=d.module==="recruit"?"recruit":"sales",stg2=md==="recruit"?d.rstage:d.stage;
@@ -1167,7 +1181,7 @@ function meetingForm(m,pre={}){
           cid=newId("clients");const cdat=cleanClient(d);cdat.stage=md==="sales"?stg2:"";cdat.rstage=md==="recruit"?stg2:"";
           await put("clients",cid,Object.assign(cdat,{firstContact:d.date,createdAt:nowIso(),updatedAt:nowIso(),status:"active"}))}
         const rec={clientId:cid,date:d.date,start:d.start||"",end:d.end||"",channel:d.channel,module:md,stage:stg2,summary:d.summary,outcome:d.outcome||"",nextAction:d.nextAction||"",nextFollowUp:d.nextFollowUp||"",
-          needs:d.needs||"",concerns:d.concerns||"",objections:d.objections||"",solutions:d.solutions||"",docs:d.docs||"",notes:d.notes||"",updatedAt:nowIso()};
+          needs:m.needs||"",concerns:m.concerns||"",objections:m.objections||"",solutions:m.solutions||"",docs:m.docs||"",notes:m.notes||"",updatedAt:nowIso()};
         const mid=isNew?newId("meetings"):m.id;
         if(isNew){rec.createdAt=nowIso();if(pre.activityId)rec.activityId=pre.activityId}
         await (isNew?put("meetings",mid,rec):patch("meetings",mid,rec));
@@ -1240,7 +1254,8 @@ function dealForm(dl,pre={}){
   const isNew=!dl;dl=dl||{status:"agreed",clientId:pre.cid||""};
   modal(isNew?"新增保单 / 成交":"编辑保单",`<form id="df" class="form" novalidate>
     <label class="f req full"><span>客户</span><select name="clientId"><option value="">— 选择客户 —</option>${clientOptions(dl.clientId)}</select></label>
-    <label class="f req"><span>产品 / 计划</span><input type="text" name="product" value="${esc(dl.product)}"></label>
+    <label class="f req"><span>产品 / 计划</span><input type="text" name="product" list="prodList" autocomplete="off" value="${esc(dl.product)}"></label>
+    <datalist id="prodList">${productList().map(p=>`<option value="${esc(p)}"></option>`).join("")}</datalist>
     <label class="f"><span>投保书 / 保单号码</span><input type="text" name="ref" value="${esc(dl.ref)}"></label>
     <label class="f req"><span>状态</span><select name="status">${opts(DEAL_ST,dl.status)}</select></label>
     <label class="f"><span>预估年缴保费（RM）</span><input type="number" min="0" name="estPremium" value="${esc(dl.estPremium??"")}"></label>
@@ -1279,21 +1294,29 @@ function clientDossier(c){
   L.push("",`保单记录（${deals.length}）：`);deals.forEach(d=>L.push(`- ${d.product}｜${DEAL_ST[d.status]}｜预估保费 ${d.estPremium??"未填"}｜提交 ${d.submitDate||"-"}｜生效 ${d.inforceDate||"-"}｜备注 ${d.notes||""}`));
   return L.join("\n").slice(0,60000);
 }
-async function aiSummary(id){
-  const c=byId("clients",id);if(!c||!sample)return;
-  const out=document.getElementById("ai-out");out.innerHTML=`<div class="empty">AI 正在阅读 ${meetingsOf(id).length} 次会面记录…（第一次使用会先请你允许）</div>`;
-  const prompt=`你是马来西亚保险顾问 SIM 的助理。请只根据下面的客户记录，用简体中文写客户摘要和下一步建议。
+/* products typed before, most used first, offered as choices next time */
+function productList(){const n={};for(const d of S.deals){const p=String(d.product||"").trim();if(p&&p!=="成交保单")n[p]=(n[p]||0)+1}return Object.keys(n).sort((a,b)=>n[b]-n[a]||a.localeCompare(b,"zh"))}
+/* AI 大师: one prompt for the client page and the meeting form; `extra` carries the meeting being filled in but not yet saved */
+function masterPrompt(c,extra){
+  return `你是「AI 大师」，一位资深的马来西亚保险销售与招聘教练，正在帮保险顾问 SIM 分析一位客户的整体情况。请只根据下面的记录，用简体中文分析，并给 SIM 具体可行的建议。
 规则：
-- 只使用记录里有的内容。不要编造客户说过的话、财务数字、会面结果或购买意愿。记录里没有的就写「记录中没有」。
-- 建议要具体，针对这位客户的实际记录，并说明原因。
+- 只使用记录里有的内容。不要编造客户说过的话、财务数字、会面结果或购买意愿。记录里没有的就写「记录中没有」，并在 missing_info 里提醒 SIM 下次可以了解什么。
+- 建议要具体，针对这位客户的实际情况（销售或招聘），说明原因，例如下次要谈什么、怎么处理顾虑、用电话还是 WhatsApp、什么时候跟进。
 - 如果记录显示优先级或阶段可能需要调整，在 suggest_* 里提出（只是建议，不会自动修改）；不需要就填 null。
-- 不要承诺核保或理赔结果。
+- 不要承诺核保、理赔或投资回报。
 只回复一个 JSON 对象，格式：
-{"background":"背景与需求","history":["每次互动一句"],"presented":["已讲解的方案"],"concerns":["顾虑与异议"],"preferences":"偏好与预算","outstanding":["未解决的事项"],"latest":"最近一次互动与结果","next_followup":"下次跟进安排","recommendations":[{"action":"具体行动","reason":"原因"}],"missing_info":["还缺少的资料"],"suggest_priority":"A|B|C|null","suggest_stage":"prospect|open|present|followup|closing|null","suggest_reason":"原因"}
+{"background":"背景与需求","history":["每次互动一句"],"presented":["已讲解的方案或事业内容"],"concerns":["顾虑与异议"],"preferences":"偏好与预算","outstanding":["未解决的事项"],"latest":"最近一次互动与结果","next_followup":"下次跟进安排","recommendations":[{"action":"具体行动","reason":"原因"}],"missing_info":["还缺少的资料"],"suggest_priority":"A|B|C|null","suggest_stage":"open|present|followup|closing|null","suggest_reason":"原因"}
 
 客户记录：
-${clientDossier(c)}`;
-  try{const data=await sample.json(prompt,{modelTier:"default"});
+${clientDossier(c)}${extra?`
+
+这次正在填写、尚未保存的会面：
+${extra}`:""}`;
+}
+async function aiSummary(id){
+  const c=byId("clients",id);if(!c||!sample)return;
+  const out=document.getElementById("ai-out");out.innerHTML=`<div class="empty">AI 大师正在阅读 ${meetingsOf(id).length} 次会面记录…（第一次使用会先请你允许）</div>`;
+  try{const data=await sample.json(masterPrompt(c),{modelTier:"default"});
     if(!data||typeof data!=="object")throw{code:"invalid_json"};
     await put("summaries",id,{data,generatedAt:nowIso(),meetingCount:meetingsOf(id).length});toast("摘要已更新");
   }catch(e){out.innerHTML=`<div class="err">${esc(SAMPLE_ERR[e&&e.code]||dbErr(e))}</div>`}
