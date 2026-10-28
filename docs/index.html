@@ -368,7 +368,7 @@ function localDb(){
   const KEY="baoxian-zhuli-db-v1";let data={};
   try{data=JSON.parse(localStorage.getItem(KEY)||"{}")||{}}catch(e){data={}}
   const subs=new Set(),clone=v=>JSON.parse(JSON.stringify(v));
-  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){toast("浏览器储存空间不足，资料没有保存")}subs.forEach(f=>f())};
+  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){toast("浏览器储存空间不足，资料没有保存")}subs.forEach(f=>f());scheduleGBackup()};
   const snap=(id,v)=>({id,exists:v!==undefined,data:()=>v,metadata:{fromCache:false,hasPendingWrites:false}});
   const newKey=()=>"l"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
   const docRef=(col,id)=>({id,path:col+"/"+id,
@@ -406,8 +406,9 @@ async function connect(){
     },err=>{console.warn(c,err);toast("读取数据失败："+(err&&err.code||"未知错误"))});
   }
   if(S.dbState==="local"){
-    let lastLoc=null;
-    db.doc("settings/main").onSnapshot(s=>{S.settings=s.exists?s.data():{};if(S.settings.weatherLoc!==lastLoc){lastLoc=S.settings.weatherLoc;liveWeather()}schedule()});
+    let lastLoc=null,gdChecked=false;
+    db.doc("settings/main").onSnapshot(s=>{S.settings=s.exists?s.data():{};if(S.settings.weatherLoc!==lastLoc){lastLoc=S.settings.weatherLoc;liveWeather()}
+      if(!gdChecked){gdChecked=true;setTimeout(dailyGBackup,5000)}schedule()});
     setInterval(liveWeather,30*60000);return;
   }
   db.doc("settings/main").onSnapshot(s=>{S.settings=s.exists?s.data():{};schedule()},()=>{});
@@ -969,7 +970,8 @@ function vAgent(){
       <button class="btn" data-act="backup" ${downloads||S.dbState==="local"?"":"disabled"}>下载备份（JSON）</button>
       <label class="btn">从备份恢复…<input type="file" id="restoreFile" accept="application/json,.json" hidden></label>
       ${S.clients.some(c=>c.example)||S.meetings.some(m=>m.example)?`<button class="btn danger" data-act="clearExamples">清除所有示例资料</button>`:""}</div>
-    <div class="hint">资料只有你自己（这个页面的拥有者）可以读取和修改。请不要输入身份证号码或病历细节。</div></section>`;
+    ${S.dbState==="local"?gdriveSection():""}
+    <div class="hint">${S.dbState==="local"?"网页版的资料只保存在这部设备的浏览器里。":"资料只有你自己（这个页面的拥有者）可以读取和修改。"}请不要输入身份证号码或病历细节。</div></section>`;
 }
 function draftCard(d){
   const c=byId("clients",d.clientId);const ph=phoneDigits(c?.phone);
@@ -1323,9 +1325,92 @@ ${clientDossier(c).slice(0,20000)}`;
 }
 
 /* ---------- backup / restore ---------- */
-async function backup(){
+function backupData(){
   const data={exportedAt:nowIso(),app:"pangkor-sales-assistant",version:1,settings:S.settings};
   for(const c of ["clients","meetings","activities","deals","drafts"])data[c]=S[c];
+  return data;
+}
+/* ---------- Google Drive auto-backup (web version only) ----------
+   SIM deploys a small Google Apps Script web app in their own Google account; the page POSTs the backup JSON to it.
+   Runs ~2 minutes after the last change, and once a day on first open. Status is kept in this browser only. */
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const GD_LAST="baoxian-gdrive-last",GD_ERR="baoxian-gdrive-err";
+const randKey=()=>{const a=new Uint8Array(12);crypto.getRandomValues(a);return [...a].map(b=>b.toString(16).padStart(2,"0")).join("")};
+const gdOk=u=>/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(u||"");
+let gdTimer=null;
+function scheduleGBackup(){if(S.dbState!=="local"||!gdOk(S.settings.gdriveUrl))return;clearTimeout(gdTimer);gdTimer=setTimeout(()=>gBackup(false),120000)}
+function dailyGBackup(){let last=null;try{last=JSON.parse(lsGet(GD_LAST)||"null")}catch(e){}if(!last||Date.now()-new Date(last.at)>20*3600e3)gBackup(false)}
+async function gPost(body){
+  const r=await fetch(S.settings.gdriveUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({key:S.settings.gdriveKey},body))});
+  const j=await r.json();if(!j.ok)throw new Error(j.error||"Google Drive 没有回应");return j;
+}
+async function gBackup(manual){
+  if(S.dbState!=="local"||!gdOk(S.settings.gdriveUrl)||!S.settings.gdriveKey){if(manual)toast("请先完成 Google Drive 备份设置");return}
+  try{const j=await gPost({filename:`baoxian-backup-${today()}.json`,data:JSON.stringify(backupData(),null,1)});
+    lsSet(GD_LAST,JSON.stringify({at:nowIso(),file:j.file}));lsSet(GD_ERR,"");if(manual)toast("已备份到 Google Drive")}
+  catch(e){lsSet(GD_ERR,String(e&&e.message||e));if(manual)toast("备份失败："+(e&&e.message||"连不上 Google Drive"))}
+  if(S.view==="agent")schedule();
+}
+function gsCode(key){return `// 保险助理 · Google Drive 备份接收程序（贴到 script.google.com）
+const KEY = '${key}';          // 和 App 里的密码一样，不要分享给别人
+const FOLDER = '保险助理备份';  // 备份放在 Google Drive 的这个文件夹
+const KEEP = 30;               // 只保留最近 30 份，旧的会移到垃圾桶
+
+function doPost(e) {
+  try {
+    const req = JSON.parse(e.postData.contents);
+    if (req.key !== KEY) return out({ ok: false, error: '密码不对' });
+    const it = DriveApp.getFoldersByName(FOLDER);
+    const folder = it.hasNext() ? it.next() : DriveApp.createFolder(FOLDER);
+    if (req.ping) return out({ ok: true, ping: true, folder: FOLDER });
+    const name = String(req.filename || 'backup.json').replace(/[^\\w.\\-]/g, '_');
+    const old = folder.getFilesByName(name);
+    while (old.hasNext()) old.next().setTrashed(true);
+    folder.createFile(name, req.data, 'application/json');
+    const files = [];
+    const all = folder.getFiles();
+    while (all.hasNext()) files.push(all.next());
+    files.sort((a, b) => b.getDateCreated() - a.getDateCreated());
+    files.slice(KEEP).forEach(f => f.setTrashed(true));
+    return out({ ok: true, file: name, at: new Date().toISOString() });
+  } catch (err) {
+    return out({ ok: false, error: String(err) });
+  }
+}
+
+function out(o) {
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}
+`}
+function gdriveSection(){
+  const st=S.settings,key=st.gdriveKey||S.gdNewKey||(S.gdNewKey=randKey());
+  let last=null;try{last=JSON.parse(lsGet(GD_LAST)||"null")}catch(e){}
+  const err=lsGet(GD_ERR),on=gdOk(st.gdriveUrl)&&st.gdriveKey;
+  const status=!on?`<span class="chip warn">还没设置</span>`:err?`<span class="chip bad">上次备份失败：${esc(err)}</span>`:last?`<span class="chip ok">已开启 · 上次备份 ${fmtDT(last.at)}</span>`:`<span class="chip ok">已开启，等待第一次备份</span>`;
+  return `<div style="border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px">
+    <h3 class="ttl">${ic("agent")}Google Drive 自动备份</h3>
+    <div class="row">${status}</div>
+    <div class="hint">开启后，每次修改资料约 2 分钟后、以及每天第一次打开 App 时，会自动把备份存进你 Google Drive 的「保险助理备份」文件夹，保留最近 30 份。资料只会进你自己的 Google Drive。</div>
+    <details ${on?"":"open"}><summary>设置步骤（只需做一次，约 3 分钟）</summary>
+      <ol style="margin:8px 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px">
+        <li>用电脑打开 <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a>，登录你的 Google 账号，会开一个新项目。</li>
+        <li>把编辑器里原本的内容全部删掉，按下面的「复制代码」，贴进去，按保存（软盘图标）。</li>
+        <li>按右上角 <b>部署（Deploy）→ 新建部署（New deployment）</b>，类型选 <b>网页应用（Web app）</b>。</li>
+        <li><b>执行身份（Execute as）</b>选「我（Me）」，<b>谁可以访问（Who has access）</b>选「任何人（Anyone）」，按部署。</li>
+        <li>Google 会请你授权：选你的账号 → 「高级（Advanced）」→ 「前往（Go to）…（不安全）」→ 允许。这是你自己写的程序，所以 Google 会这样提醒。</li>
+        <li>复制「网页应用网址（Web app URL）」，贴到下面，按「保存并测试」。</li>
+      </ol>
+      <textarea id="gsCode" rows="6" readonly style="font-family:ui-monospace,Consolas,monospace;font-size:12px">${esc(gsCode(key))}</textarea>
+      <div class="row" style="margin-top:6px"><button type="button" class="btn sm" data-act="copyGs">复制代码</button><span class="hint">代码里已经放好你专属的密码</span></div></details>
+    <form id="gdForm" class="form" novalidate>
+      <label class="f full"><span>网页应用网址（Web app URL）</span><input type="text" name="gdriveUrl" value="${esc(st.gdriveUrl||"")}" placeholder="https://script.google.com/macros/s/…/exec"></label>
+      <input type="hidden" name="gdriveKey" value="${esc(key)}">
+      <div class="full row"><button class="btn primary" type="submit">保存并测试</button><button type="button" class="btn" data-act="gdriveNow" ${on?"":"disabled"}>立即备份到 Google Drive</button><span class="err" id="gdMsg"></span></div></form>
+    <div class="hint">要恢复资料：到 Google Drive「保险助理备份」下载最新的文件，再用上面的「从备份恢复」。</div></div>`;
+}
+async function backup(){
+  const data=backupData();
   if(!downloads){
     if(S.dbState!=="local")return;
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:"application/json"}));
@@ -1378,6 +1463,8 @@ const A={
   saveDraft:d=>{const tx=document.getElementById("dt_"+d.id);patch("drafts",d.id,{text:tx.value}).then(()=>toast("已保存")).catch(x=>toast(dbErr(x)))},
   skipDraft:d=>patch("drafts",d.id,{status:"skipped",decidedAt:nowIso()}).then(()=>toast("已跳过")).catch(x=>toast(dbErr(x))),
   backup:()=>backup(),
+  gdriveNow:()=>gBackup(true),
+  copyGs:async()=>{const t=document.getElementById("gsCode");try{await navigator.clipboard.writeText(t.value);toast("代码已复制，可以贴到 script.google.com")}catch(e){t.focus();t.select();toast("请按 Ctrl+C 复制")}},
   clearExamples:()=>confirmBox("清除示例资料","这会删除所有标着「示例」的客户、会面、活动、保单和草稿。你自己输入的资料不受影响。","清除",async()=>{
     for(const c of ["meetings","activities","deals","drafts","clients"])for(const r of S[c].filter(x=>x.example))await del(c,r.id);
     for(const id of Object.keys(S.summaries))if(!byId("clients",id))await del("summaries",id);toast("示例资料已清除")}),
@@ -1402,9 +1489,16 @@ document.addEventListener("change",e=>{
   if(t.id==="restoreFile"&&t.files[0]){restoreFrom(t.files[0]);t.value=""}
 });
 document.addEventListener("submit",async e=>{
+  if(e.target.id==="gdForm"){e.preventDefault();const d=formData(e.target),msg=document.getElementById("gdMsg");
+    if(!gdOk(d.gdriveUrl)){msg.textContent="网址不对。应该是 https://script.google.com/macros/s/…/exec 这样的格式。";return}
+    msg.style.color="";msg.textContent="正在测试连接…";
+    try{await db.doc("settings/main").set(Object.assign({},S.settings,{gdriveUrl:d.gdriveUrl,gdriveKey:d.gdriveKey,updatedAt:nowIso()}));
+      await gPost({ping:true});lsSet(GD_ERR,"");toast("连接成功，正在做第一次备份");await gBackup(true)}
+    catch(x){lsSet(GD_ERR,String(x&&x.message||x));const m=document.getElementById("gdMsg");if(m)m.textContent="连接失败："+(x&&x.message||"请确认部署时「谁可以访问」选了「任何人」，以及代码已经保存")}
+    return}
   if(e.target.id!=="settingsForm")return;e.preventDefault();const d=formData(e.target),err=document.getElementById("settingsErr");
   const w={};for(const k of OPEN_DEAL){const v=d["w_"+k];if(v===""){w[k]=null;continue}const n=num(v);if(isNaN(n)||n<0||n>100){err.textContent="权重要在 0 到 100 之间。";return}w[k]=n}
-  try{await db.doc("settings/main").set({mbdRule:d.mbdRule||"",mbdBasis:d.mbdBasis,weatherLoc:WLOC[d.weatherLoc]?d.weatherLoc:"pangkor",weights:w,updatedAt:nowIso()});err.textContent="";toast("设置已保存")}catch(x){err.textContent=dbErr(x)}
+  try{await db.doc("settings/main").set(Object.assign({},S.settings,{mbdRule:d.mbdRule||"",mbdBasis:d.mbdBasis,weatherLoc:WLOC[d.weatherLoc]?d.weatherLoc:"pangkor",weights:w,updatedAt:nowIso()}));err.textContent="";toast("设置已保存")}catch(x){err.textContent=dbErr(x)}
 });
 setInterval(()=>{if(S.view==="calendar"&&!document.getElementById("ov"))schedule()},60000);
 
