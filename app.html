@@ -174,6 +174,9 @@ details summary{cursor:pointer;color:var(--accent);font-size:14px}
 .modal{background:var(--surface);border-radius:14px;width:100%;max-width:680px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow)}
 .modal-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .modal-f{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+/* long forms: keep the save row and any error in view at the bottom of the screen */
+.modal form .modal-f{position:sticky;bottom:0;background:var(--surface);padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);z-index:3}
+.modal form .err:not(:empty){position:sticky;bottom:calc(64px + env(safe-area-inset-bottom,0px));background:var(--bad-bg);color:var(--bad);padding:8px 12px;border-radius:8px;z-index:3}
 .fab{position:fixed;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:40;border-radius:999px;padding:13px 20px;box-shadow:var(--shadow);font-size:15px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;z-index:60}
 /* calendar */
@@ -1108,7 +1111,7 @@ function meetingForm(m,pre={}){
     const f=r.querySelector("#mf"),sel=r.querySelector("#mfClient"),nw=r.querySelector("#mfNew"),stg=r.querySelector("#mfStage"),sm=r.querySelector("#mfSummary");
     const syncNew=()=>{nw.hidden=sel.value!=="__new";const sc=byId("clients",sel.value);
       r.querySelector("#mfSel").innerHTML=sel.value==="__new"?"将创建新客户，可以在下面补充资料。":sc?`已选：<b>${esc(sc.name)}</b> ${prioChip(sc.priority)} ${stageChip(sc.stage)}${sc.phone?" · "+esc(sc.phone):""}`:"";nw.querySelectorAll("input,select").forEach(i=>i.disabled=nw.hidden);
-      const cc=byId("clients",sel.value);if(cc&&isNew){if(!f.dataset.st){f.elements.stage.value=STAGE_IDX[cc.stage]!=null?cc.stage:"open";f.elements.rstage.value=cc.rstage||"ro";if(cc.rstage&&STAGE_IDX[cc.stage]==null)f.elements.module.value="recruit"}r.querySelector("#mfPrio").value=cc.priority||"B";f.waitingOn.value=cc.waitingOn||"none"}syncMod()};
+      const cc=byId("clients",sel.value);if(cc&&isNew){if(!f.dataset.st){f.elements.stage.value=STAGE_IDX[cc.stage]!=null?cc.stage:"open";f.elements.rstage.value=cc.rstage||"ro";if(cc.rstage&&STAGE_IDX[cc.stage]==null)f.elements.module.value="recruit"}if(!f.dataset.pr)r.querySelector("#mfPrio").value=cc.priority||"B";f.waitingOn.value=cc.waitingOn||"none"}syncMod()};
     function syncMod(){const md=f.elements.module.value||"sales",sw=r.querySelector("#mfSalesW"),rw=r.querySelector("#mfRecW"),cb=r.querySelector("#mfClose");
       sw.hidden=md!=="sales";rw.hidden=md!=="recruit";
       sw.querySelectorAll("input").forEach(i=>i.disabled=sw.hidden);rw.querySelectorAll("input").forEach(i=>i.disabled=rw.hidden);
@@ -1125,9 +1128,9 @@ function meetingForm(m,pre={}){
       list.hidden=!list.innerHTML||sel.value!=="";q.setAttribute("aria-expanded",String(!list.hidden))};
     const pick=c=>{sel.value=c.id;q.value=c.name;list.hidden=true;ask.hidden=true;r.querySelector("#mfErr").textContent="";syncNew()};
     const makeNew=()=>{sel.value="__new";list.hidden=true;ask.hidden=true;r.querySelector("#mfErr").textContent="";nw.querySelector("[name=name]").value=q.value.trim();syncNew()};
-    const askNew=()=>{list.hidden=true;const nm=q.value.trim();if(!nm)return;
-      ask.innerHTML=`<span>没有找到「<b>${esc(nm)}</b>」的记录。要创建新客户吗？</span><button type="button" class="btn sm primary" id="mfYes">创建新客户</button><button type="button" class="btn sm" id="mfNo">重新输入</button>`;ask.hidden=false;
-      ask.querySelector("#mfYes").onclick=makeNew;ask.querySelector("#mfNo").onclick=()=>{ask.hidden=true;q.value="";q.focus()}};
+    const askNew=saveAfter=>{list.hidden=true;const nm=q.value.trim();if(!nm)return;
+      ask.innerHTML=`<span>没有找到「<b>${esc(nm)}</b>」的记录。要创建新客户吗？</span><button type="button" class="btn sm primary" id="mfYes">${saveAfter?"创建新客户并保存":"创建新客户"}</button><button type="button" class="btn sm" id="mfNo">重新输入</button>`;ask.hidden=false;
+      ask.querySelector("#mfYes").onclick=()=>{makeNew();if(saveAfter)f.requestSubmit()};ask.querySelector("#mfNo").onclick=()=>{ask.hidden=true;q.value="";q.focus()}};
     q.addEventListener("input",()=>{sel.value="";hi=-1;ask.hidden=true;syncNew();showList()});
     q.addEventListener("focus",()=>{if(!sel.value)showList()});
     q.addEventListener("keydown",e=>{
@@ -1136,15 +1139,17 @@ function meetingForm(m,pre={}){
       else if(e.key==="Enter"){e.preventDefault();if(hi>=0&&matches[hi])pick(matches[hi]);else{const ex=S.clients.find(c=>normName(c.name)===normName(q.value));ex?pick(ex):askNew()}}
       else if(e.key==="Escape"&&!list.hidden){e.stopPropagation();list.hidden=true}});
     list.addEventListener("mousedown",e=>{const b=e.target.closest(".ta-item");if(!b)return;e.preventDefault();b.dataset.new?makeNew():pick(matches[+b.dataset.i])});
-    q.addEventListener("blur",()=>setTimeout(()=>{list.hidden=true;if(sel.value||!q.value.trim()||!document.body.contains(q))return;
+    q.addEventListener("blur",()=>setTimeout(()=>{list.hidden=true;if(sel.value||!q.value.trim()||!ask.hidden||!document.body.contains(q))return;
       const ex=S.clients.find(c=>normName(c.name)===normName(q.value));ex?pick(ex):askNew()},150));
     syncNew();
-    f.addEventListener("change",e=>{const n=e.target.name;if(n==="stage"||n==="rstage"||n==="module"){if(n!=="module")f.dataset.st="1";syncMod()}});
+    f.addEventListener("change",e=>{const n=e.target.name;if(n==="priority")f.dataset.pr="1";if(n==="stage"||n==="rstage"||n==="module"){if(n!=="module")f.dataset.st="1";syncMod()}});
     const delB=r.querySelector("#mfDel");if(delB)delB.onclick=()=>confirmBox("删除会面记录",`确定要删除 ${fmtD(m.date)} 和 ${clientName(m.clientId)} 的会面记录吗？删除后无法恢复。`,"删除",()=>del("meetings",m.id));
     f.onsubmit=async e=>{e.preventDefault();const d=formData(f),err=r.querySelector("#mfErr");
-      if(!d.clientId){const ex=S.clients.find(c=>normName(c.name)===normName(q.value));
-        if(ex){pick(ex);return err.textContent=`已选好客户「${ex.name}」，请确认阶段和优先级后再按一次保存。`}
-        if(q.value.trim())askNew();else q.focus();return err.textContent=q.value.trim()?"请从名单里选择客户，或确认创建新客户。":"请输入客户名字。"}
+      if(!d.clientId){const nm=q.value.trim();
+        if(!nm){q.focus();return err.textContent="请输入客户名字。"}
+        const ex=S.clients.find(c=>normName(c.name)===normName(nm));
+        if(ex){pick(ex);setTimeout(()=>f.requestSubmit(),0);return}
+        askNew(true);ask.scrollIntoView({block:"center"});return err.textContent=`「${nm}」是新客户吗？请按上面的「创建新客户并保存」。`}
       if(!isDate(d.date))return err.textContent="请填写会面日期。";
       if(d.start&&d.end&&toMin(d.end)<=toMin(d.start))return err.textContent="结束时间要比开始时间晚。";
       if(!d.summary)return err.textContent="请写下讨论摘要（一两句就够）。";
