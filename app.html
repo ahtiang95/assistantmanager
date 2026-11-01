@@ -1124,7 +1124,7 @@ function findDup(name,phone,exceptId){
   return S.clients.find(c=>c.id!==exceptId&&(normName(c.name)===n||(p&&p.length>=8&&phoneDigits(c.phone)===p)));
 }
 function clientFields(c={},inMeeting){
-  return `<label class="f req"><span>姓名</span><input type="text" name="name" value="${esc(c.name)}" required></label>
+  return `<label class="f req"><span>姓名</span><input type="text" name="name" data-upper value="${esc(c.name)}" required></label>
     <label class="f"><span>电话 / WhatsApp</span><input type="tel" name="phone" value="${esc(c.phone)}" placeholder="例如 012-345 6789"></label>
     <label class="f"><span>生日</span><input type="date" name="dob" value="${esc(c.dob)}"></label>
     <label class="f"><span>性别</span><select name="gender">${opts(GENDER,c.gender||"")}</select></label>
@@ -1175,6 +1175,7 @@ function cleanClient(d){
   const o={};
   if("dependents" in d)o.dependents=d.dependents===""?null:num(d.dependents);
   for(const k of ["name","phone","dob","gender","smoker","marital","occupation","lang","priority","stage","firstContact","nextFollowUp","nextAction","waitingOn","rstage","status","lostReason","needs","coverage","concerns","notes"])if(k in d)o[k]=d[k]||"";
+  if(o.name)o.name=o.name.toUpperCase();
   if("income" in d)o.income=d.income===""?null:num(d.income);
   return o;
 }
@@ -1195,7 +1196,7 @@ function meetingForm(m,pre={}){
   modal(isNew?"记录会面":"编辑会面记录",`<form id="mf" class="form" novalidate>
     ${isNew&&pre.fromCal?`<div class="full"><div class="seg" role="group" aria-label="类别">${Object.entries(CATS).map(([k,v])=>`<button type="button" data-tocat="${k}" aria-pressed="${k==="client"}"><span class="dot ${k}"></span> ${v}</button>`).join("")}</div></div>`:""}
     <div class="f req full"><span>客户名字</span>
-      <div class="ta"><input type="text" id="mfQ" autocomplete="off" placeholder="直接输入客户名字或电话" value="${esc(c?c.name:"")}" role="combobox" aria-expanded="false" aria-controls="mfList">
+      <div class="ta"><input type="text" id="mfQ" data-upper autocomplete="off" placeholder="输入客户名字或电话，按 Enter 直接建立新客户" value="${esc(c?c.name:"")}" role="combobox" aria-expanded="false" aria-controls="mfList">
         <div class="ta-list" id="mfList" role="listbox" hidden></div></div>
       <input type="hidden" name="clientId" id="mfClient" value="${esc(m.clientId||"")}">
       <div class="hint" id="mfSel"></div>
@@ -1264,7 +1265,10 @@ function meetingForm(m,pre={}){
     q.addEventListener("keydown",e=>{
       if(e.key==="ArrowDown"){e.preventDefault();hi=Math.min(hi+1,matches.length-1);showList()}
       else if(e.key==="ArrowUp"){e.preventDefault();hi=Math.max(hi-1,-1);showList()}
-      else if(e.key==="Enter"){e.preventDefault();if(hi>=0&&matches[hi])pick(matches[hi]);else{const ex=S.clients.find(c=>normName(c.name)===normName(q.value));ex?pick(ex):askNew()}}
+      else if(e.key==="Enter"){if(e.isComposing)return;e.preventDefault();
+        if(hi>=0&&matches[hi])pick(matches[hi]);
+        else{const ex=S.clients.find(c=>normName(c.name)===normName(q.value));
+          if(ex)pick(ex);else if(q.value.trim()){makeNew();toast(`已建立新客户「${q.value.trim()}」，保存后生效`);const ph=nw.querySelector("[name=phone]");if(ph)ph.focus()}}}
       else if(e.key==="Escape"&&!list.hidden){e.stopPropagation();list.hidden=true}});
     list.addEventListener("mousedown",e=>{const b=e.target.closest(".ta-item");if(!b)return;e.preventDefault();b.dataset.new?makeNew():pick(matches[+b.dataset.i])});
     q.addEventListener("blur",()=>setTimeout(()=>{list.hidden=true;if(sel.value||!q.value.trim()||!ask.hidden||!document.body.contains(q))return;
@@ -1647,6 +1651,10 @@ const A={
 /* tapping anywhere on a date / time / month box opens the picker, not only the small icon */
 document.addEventListener("click",e=>{const t=e.target;if(t.tagName==="INPUT"&&/^(date|time|month)$/.test(t.type)&&!t.readOnly&&!t.disabled&&t.showPicker){try{t.showPicker()}catch(x){}}});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b||b.hasAttribute("disabled"))return;const fn=A[b.dataset.act];if(fn){if(b.tagName!=="A")e.preventDefault();fn(b.dataset,b,e)}});
+/* client names: English letters are turned to capitals as you type (Chinese input is left alone while composing) */
+function upperIn(el){const v=el.value,up=v.toUpperCase();if(up===v)return;const p=el.selectionStart;el.value=up;try{el.setSelectionRange(p,p)}catch(x){}}
+document.addEventListener("input",e=>{const t=e.target;if(t.matches&&t.matches("[data-upper]")&&!e.isComposing)upperIn(t)},true);
+document.addEventListener("compositionend",e=>{const t=e.target;if(t.matches&&t.matches("[data-upper]"))upperIn(t)},true);
 document.addEventListener("input",e=>{
   if(e.target.id==="clientQ"){S.clientQ=e.target.value;const pos=e.target.selectionStart;render();const i=document.getElementById("clientQ");i.focus();i.setSelectionRange(pos,pos)}
   if(e.target.id==="meetQ"){S.meetQ=e.target.value;const pos=e.target.selectionStart;render();const i=document.getElementById("meetQ");i.focus();i.setSelectionRange(pos,pos)}
