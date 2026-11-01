@@ -26,9 +26,15 @@ body{background-color:var(--bg);background-image:url("data:image/svg+xml,%3Csvg 
 button,input,select,textarea{font:inherit;color:inherit}
 .num,td.n,.stat b{font-variant-numeric:tabular-nums}
 a{color:var(--accent)}
-.app{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:100%}
-nav.rail{position:sticky;top:0;height:100vh;padding:22px 12px;border-right:1px solid var(--line);background:rgba(255,255,255,.85);display:flex;flex-direction:column;gap:2px}
-.brand{font-family:var(--f-display);font-size:19px;padding:0 10px 4px;display:flex;align-items:center;gap:8px}
+/* menu lives in a bar fixed to the bottom of the screen on every device */
+:root{--navh:64px}
+.app{display:block;min-height:100%}
+nav.rail{position:fixed;left:0;right:0;bottom:0;z-index:45;display:flex;flex-direction:row;gap:2px;overflow-x:auto;scrollbar-width:none;
+  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));
+  background:rgba(255,255,255,.97);border-top:1px solid var(--line);box-shadow:0 -4px 18px rgba(30,70,80,.06)}
+nav.rail::-webkit-scrollbar{display:none}
+nav.rail>.nav-btn:first-of-type{margin-left:auto}nav.rail>.nav-btn:last-of-type{margin-right:auto}
+.brand{display:none}
 .brand svg{width:38px;height:38px;flex:none}
 .brand span{font-size:17px;line-height:1.3}
 .hero{display:flex;align-items:center;justify-content:space-between;gap:16px;border-radius:18px;padding:22px 26px;overflow:hidden;
@@ -47,11 +53,11 @@ nav.rail{position:sticky;top:0;height:100vh;padding:22px 12px;border-right:1px s
 .wx-src{font-size:11px;color:var(--muted)}
 .empty-art{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;padding:6px 0}
 .empty-art svg{width:44px;height:16px;flex:none}
-.brand-sub{font-size:12px;color:var(--muted);padding:0 10px 16px;letter-spacing:.02em}
-.nav-btn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;border:0;background:none;padding:9px 10px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:500}
+.brand-sub{display:none}
+.nav-btn{position:relative;display:flex;flex:none;align-items:center;justify-content:center;min-width:70px;border:0;background:none;padding:4px 6px;border-radius:10px;cursor:pointer;color:var(--muted);font-weight:500;font-size:11.5px;white-space:nowrap}
 .nav-btn:hover{background:var(--surface2);color:var(--ink)}
 .nav-btn[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
-.nav-l{display:inline-flex;align-items:center;gap:10px}
+.nav-l{display:flex;flex-direction:column;align-items:center;gap:3px}
 .ic{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:9px;flex:none}
 .ic svg{width:17px;height:17px}
 .ic.lg{width:42px;height:42px;border-radius:13px}
@@ -59,8 +65,8 @@ nav.rail{position:sticky;top:0;height:100vh;padding:22px 12px;border-right:1px s
 .ttl{display:flex;align-items:center;gap:10px}
 h1.ttl{gap:12px}
 .nav-btn[aria-current="page"] .ic{box-shadow:0 0 0 2px var(--surface),0 0 0 3px currentColor}
-.nav-badge{font-size:11px;min-width:20px;padding:0 6px;border-radius:10px;background:var(--bad);color:#fff;text-align:center;line-height:18px}
-main{min-width:0;padding-block:24px 110px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.nav-badge{position:absolute;top:0;right:8px;font-size:10px;min-width:17px;padding:0 4px;border-radius:9px;background:var(--bad);color:#fff;text-align:center;line-height:16px}
+main{min-width:0;padding-block:24px calc(var(--navh) + 90px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 h1{font-family:var(--f-display);font-size:26px;line-height:1.25;margin:0;text-wrap:balance}
 h2{font-size:16px;margin:0;font-weight:700}
@@ -148,6 +154,8 @@ h3{font-size:14px;margin:0;font-weight:700}
 .fu-row input[type=date]{max-width:200px}
 .fu-quick{display:flex;flex-wrap:wrap;gap:6px}
 .fu-quick .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.wa-btn{background:#25a35a;color:#fff}.wa-btn:hover{filter:brightness(.95)}
+.dr-n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:13px;align-self:flex-start}
 .goal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .goal{background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .goal-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -214,14 +222,13 @@ details summary{cursor:pointer;color:var(--accent);font-size:14px}
 /* long forms: keep the save row and any error in view at the bottom of the screen */
 .modal form .modal-f{position:sticky;bottom:0;background:var(--surface);padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);z-index:3}
 .modal form .err:not(:empty){position:sticky;bottom:calc(64px + env(safe-area-inset-bottom,0px));background:var(--bad-bg);color:var(--bad);padding:8px 12px;border-radius:8px;z-index:3}
-.fab{position:fixed;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:40;border-radius:999px;padding:13px 20px;box-shadow:var(--shadow);font-size:15px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;z-index:60}
+.fab{position:fixed;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(var(--navh) + 16px + env(safe-area-inset-bottom,0px));z-index:40;border-radius:999px;padding:13px 20px;box-shadow:var(--shadow);font-size:15px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navh) + 76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;z-index:60}
 /* calendar */
 .cal-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
 /* calendar page fills exactly one screen: header, week stats strip, then the 07:00–23:00 grid takes the rest.
    Events are placed in % of the day (960 minutes), so the grid stretches to whatever height is left. */
-body.fit .app{height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));grid-template-rows:minmax(0,1fr)}
-body.fit main{height:100%;overflow:hidden;padding-block:14px}
+body.fit main{height:calc(100dvh - var(--navh) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:hidden;padding-block:14px}
 body.fit .wrap{height:100%;gap:10px}
 body.fit #fab{display:none}
 .cal-page{display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
@@ -302,11 +309,9 @@ body.fit #fab{display:none}
 tr.hot td:first-child{font-weight:700}
 .bar-chart text{fill:var(--muted);font-size:11px}
 @media (max-width:820px){
-  .app{grid-template-columns:minmax(0,1fr)}
-  nav.rail{position:sticky;top:env(safe-area-inset-top,0px);height:auto;flex-direction:row;overflow-x:auto;padding:8px max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));border-right:0;border-bottom:1px solid var(--line);z-index:30;gap:4px}
-  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:31;background:var(--surface)}
-  .brand,.brand-sub{display:none}
-  body.fit .app{grid-template-rows:auto minmax(0,1fr)}
+  :root{--navh:58px}
+  .nav-btn{min-width:62px;font-size:10.5px;padding:3px 4px}
+  .nav-btn .ic{width:26px;height:26px}
   body.fit main{padding-block:8px}
   .cal-legend{display:none}
   /* phone week view: the whole week fits the screen with no scrolling — tiny wrapping text, boxes grow only to fit a long name;
@@ -339,8 +344,7 @@ tr.hot td:first-child{font-weight:700}
   .hero{padding:16px 18px}
   .hero{flex-direction:column;align-items:stretch}
   .wx{width:auto;max-width:none}
-  .nav-btn{width:auto;white-space:nowrap;flex:none}
-  main{padding-block:16px 110px}
+  main{padding-block:16px calc(var(--navh) + 90px + env(safe-area-inset-bottom,0px))}
   h1{font-size:22px}
   .kanban{grid-template-columns:repeat(var(--n),minmax(220px,78vw))}
   .btn.big{padding:11px 16px;font-size:15px}
@@ -415,7 +419,7 @@ const STAGE_HINTS={
   followup:"跟进阶段：还没解决的顾虑、延迟决定的原因、还需要的文件资料、之前的跟进、约定的下一步",
   closing:"成交阶段：投保书准备与提交、待补文件、核保进度、客户接受条款、批核与生效"
 };
-const VIEWS=[["home","今日"],["calendar","成功宝典（日历）"],["clients","客户"],["meetings","会面记录"],["followups","跟进"],["pipeline","销售管道"],["closed","成交客户"],["reports","业绩报告"],["agent","每日助理"]];
+const VIEWS=[["home","今日"],["daily","每日报告"],["calendar","成功宝典（日历）"],["clients","客户"],["meetings","会面记录"],["followups","跟进"],["pipeline","销售管道"],["closed","成交客户"],["reports","业绩报告"],["agent","每日助理"]];
 const SAMPLE_ERR={not_granted:"你没有允许这个页面使用 Claude，AI 功能已关闭。",sampling_disabled:"这个账号暂时不能使用 AI 功能。",rate_limited:"AI 请求太频繁，请稍后再试。",session_expired:"登录已过期，请重新登录 claude.ai。",refused:"AI 无法处理这份内容，请修改后再试。",invalid_json:"AI 返回的格式不正确，请再试一次。",prompt_too_large:"资料太多，AI 一次读不完。"};
 
 /* ---------- date + format utils ---------- */
@@ -531,7 +535,7 @@ function render(){
   document.body.classList.toggle("fit",S.view==="calendar"&&!S.clientId);
   const v=document.getElementById("view");
   const keepScroll=v.querySelector(".cal-scroll")?.scrollTop;
-  const fn={home:vHome,calendar:vCalendar,clients:S.clientId?vClient:vClients,meetings:vMeetings,followups:vFollowups,pipeline:vPipeline,closed:vClosed,reports:vReports,agent:vAgent}[S.view];
+  const fn={home:vHome,calendar:vCalendar,clients:S.clientId?vClient:vClients,meetings:vMeetings,followups:vFollowups,pipeline:vPipeline,closed:vClosed,daily:vDaily,reports:vReports,agent:vAgent}[S.view];
   let html=dbBanner()+fn();
   v.innerHTML=html;
   if(S.view==="calendar")mountCalendar(keepScroll);
@@ -644,13 +648,14 @@ const ICONS={
   pipeline:SVG('<path d="M3 4h18l-7 8v6l-4 2v-8z"/>'),
   reports:SVG('<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>'),
   agent:SVG('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>'),
+  daily:SVG('<path d="M9 4h6v3H9z"/><path d="M15 5h3v16H6V5h3"/><path d="M9 11h6M9 15h4"/>'),
   closed:SVG('<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20.5h7M10 17h4l.5 3.5h-5z"/>'),
   star:SVG('<path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>'),
   alarm:SVG('<circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 2M4 4.5l2.5-2M20 4.5l-2.5-2"/>'),
   cake:SVG('<path d="M4 21v-7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7M3 21h18M4 16c1.5 1.2 3 1.2 4 0s2.5-1.2 4 0 3 1.2 4 0 2.5-1.2 4 0M12 12V8M12 5.5c.8-.8.8-1.7 0-2.5-.8.8-.8 1.7 0 2.5z"/>')
 };
 const TINT={home:["#fdf1d6","#b7791f"],calendar:["var(--c-work-bg)","var(--c-work)"],clients:["var(--c-client-bg)","var(--c-client)"],meetings:["var(--accent-soft)","var(--accent)"],
-  followups:["var(--warn-bg)","var(--warn)"],pipeline:["#efe9f8","#7b5fb0"],closed:["#fdf1d6","#b7791f"],reports:["var(--ok-bg)","var(--ok)"],agent:["#e3f2f5","#2b7f90"],
+  followups:["var(--warn-bg)","var(--warn)"],pipeline:["#efe9f8","#7b5fb0"],daily:["#e2f4ea","#2f8a57"],closed:["#fdf1d6","#b7791f"],reports:["var(--ok-bg)","var(--ok)"],agent:["#e3f2f5","#2b7f90"],
   star:["var(--pA-bg)","var(--pA)"],alarm:["var(--bad-bg)","var(--bad)"],cake:["#fbe6ee","#c2527a"]};
 const ic=(name,lg)=>{const [bg,fg]=TINT[name]||TINT.meetings;return `<span class="ic${lg?" lg":""}" style="background:${bg};color:${fg}">${ICONS[name]}</span>`};
 /* today card: live local time + date; weather is written once a morning by the daily assistant (the page itself cannot reach the internet) */
@@ -687,6 +692,49 @@ const BTN_CLIENT=`<button class="btn big teal" data-act="newClient">${IC_PERSON}
 const BTN_ACT=`<button class="btn big blue" data-act="newActivity">${IC_CAL}新活动</button>`;
 
 /* ---------- views: home ---------- */
+/* daily report for SIM's manager: every meeting recorded on one day, in time order — name, stage, what was discussed —
+   as WhatsApp-ready text that SIM can edit, copy or send */
+function dayMeetings(d){return S.meetings.filter(m=>m.date===d).sort((a,b)=>(a.start||"99").localeCompare(b.start||"99")||String(a.createdAt||"").localeCompare(String(b.createdAt||"")))}
+const stageTag=m=>m.module==="recruit"?`招聘 · ${rstageName(m.stage)}`:(STAGES.find(s=>s[0]===m.stage)||[,"",m.stage||"未设定"])[2];
+function dailyText(d){
+  const ms=dayMeetings(d),isToday=d===today();
+  if(!ms.length)return `【每日会面报告】${fmtD(d)}\n${isToday?"今天":"这天"}没有会面记录。`;
+  const L=[`【每日会面报告】${fmtD(d)}`,`${isToday?"今天":"这天"}见了 ${new Set(ms.map(m=>m.clientId)).size} 位客户，共 ${ms.length} 次会面`,""];
+  ms.forEach((m,i)=>{
+    const dl=m.dealId?byId("deals",m.dealId):null;
+    L.push(`${i+1}. ${clientName(m.clientId)}【${stageTag(m)}】${m.start?" "+t12l(m.start):""}`);
+    const tags=[m.plan&&`规划：${m.plan}`,m.ptype&&`保单：${m.ptype}`,m.response&&`回应：${m.response}`].filter(Boolean);
+    if(tags.length)L.push(tags.join("｜"));
+    if(m.summary)L.push(`内容：${m.summary}`);
+    if(dl)L.push(`成交：${dl.policies||1} 张，ANP ${rm(dl.premium??dl.estPremium)}${dl.product&&dl.product!=="成交保单"?`（${dl.product}）`:""}`);
+    if(m.nextAction||m.nextFollowUp)L.push(`下一步：${m.nextAction||"跟进"}${m.nextFollowUp?`（${fmtFull(m.nextFollowUp)}）`:""}`);
+    L.push("");
+  });
+  const by=Object.fromEntries(STAGES.map(s=>[s[0],0]));ms.forEach(m=>{if(m.module!=="recruit"&&by[m.stage]!=null)by[m.stage]++});
+  const c=closedIn(d,d),rc=ms.filter(m=>m.module==="recruit").length;
+  L.push("—— 小结 ——",STAGES.map(([k,zh,en])=>`${en} ${by[k]}`).join("｜")+(rc?`｜招聘 ${rc}`:""));
+  if(c.n)L.push(`成交保单 ${c.n} 张，NB ${rm(c.anp)}`);
+  return L.join("\n");
+}
+function waLink(text){const p=phoneDigits(S.settings.bossPhone);return `https://wa.me/${p}?text=${encodeURIComponent(text)}`}
+function vDaily(){
+  const d=S.dailyDate||today(),ms=dayMeetings(d),txt=dailyText(d);
+  return `<div class="head"><div><div class="sub">每天发给上司的会面整理</div><h1 class="ttl">${ic("daily",1)}每日报告</h1></div>
+    <div class="row"><button class="btn" data-act="dailyNav" data-n="-1" aria-label="前一天">‹</button><button class="btn" data-act="dailyNav" data-n="0">今天</button><button class="btn" data-act="dailyNav" data-n="1" aria-label="后一天">›</button></div></div>
+  <section class="panel"><div class="panel-h"><h2>${fmtD(d)}</h2><span class="sub">${ms.length} 次会面</span></div>
+    ${ms.length?`<div class="list">${ms.map((m,i)=>`<div class="item clickable" data-act="editMeeting" data-id="${m.id}"><span class="dr-n num">${i+1}</span><div class="grow"><div class="t">${esc(clientName(m.clientId))} ${meetChip(m)}${m.start?` <span class="sub num">${t12l(m.start)}</span>`:""}</div>
+      <div class="m">${esc([m.plan,m.ptype,m.response].filter(Boolean).join("｜"))}${m.summary?`${m.plan||m.ptype||m.response?"<br>":""}${esc(m.summary)}`:""}${!m.summary&&!m.plan&&!m.ptype&&!m.response?"（没有写内容）":""}</div></div></div>`).join("")}</div>
+      <div class="hint">点任何一条可以修改那次会面记录，报告会跟着更新。</div>`
+    :`<div class="empty">这天还没有记录会面。</div>`}</section>
+  <section class="panel"><div class="panel-h"><h2 class="ttl">${ic("meetings")}报告文字</h2><span class="sub">发送前可以直接修改</span></div>
+    <textarea id="dailyTxt" rows="${Math.min(22,Math.max(6,txt.split("\n").length+1))}" style="font-size:14px;line-height:1.6">${esc(txt)}</textarea>
+    <div class="row"><a class="btn big wa-btn" id="dailyWa" href="${esc(waLink(txt))}" target="_blank" rel="noopener">${WA_ICON}发送到 WhatsApp</a>
+      <button class="btn" data-act="copyDaily">复制文字</button></div>
+    <form id="bossForm" class="row" style="gap:6px" novalidate><span class="sub">上司的 WhatsApp 号码（选填）</span>
+      <input type="tel" name="bossPhone" value="${esc(S.settings.bossPhone||"")}" placeholder="例如 012-345 6789" style="max-width:200px"><button class="btn sm" type="submit">保存</button></form>
+    <div class="hint">${S.settings.bossPhone?"按「发送到 WhatsApp」会直接打开和上司的对话，文字已经填好，由你按发送。":"还没存上司的号码：按「发送到 WhatsApp」后，在 WhatsApp 里选上司再按发送。"}</div></section>`;
+}
+const WA_ICON='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3a2.9 2.9 0 0 0-.9 2.2c0 1.3.9 2.5 1 2.7.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>';
 /* this year's goals on the home page: NB (ANP) and NOC (policies) come from closed policies by submit date; QFYLP progress is typed in by SIM */
 function goalsPanel(){
   const y=today().slice(0,4),g=(S.settings.goals||{})[y]||{},c=closedIn(`${y}-01-01`,`${y}-12-31`);
@@ -1710,6 +1758,8 @@ const A={
   backClients:()=>{S.clientId=null;render()},
   closedF:d=>{S.closedF=d.f;render()},
   editGoals:()=>goalsForm(),
+  dailyNav:d=>{const n=+d.n;S.dailyDate=n===0?today():addDays(S.dailyDate||today(),n);render()},
+  copyDaily:async()=>{const t=document.getElementById("dailyTxt");try{await navigator.clipboard.writeText(t.value);toast("已复制，可以贴到 WhatsApp")}catch(e){t.focus();t.select();toast("请长按选择全部后复制")}},
   toggleMeet:d=>{S.meetOpen.has(d.id)?S.meetOpen.delete(d.id):S.meetOpen.add(d.id);render()},
   newClient:()=>clientForm(null),
   editClient:d=>clientForm(byId("clients",d.id)),
@@ -1770,7 +1820,12 @@ document.addEventListener("change",e=>{
   if(t.dataset.stageFor){patch("clients",t.dataset.stageFor,{stage:t.value,updatedAt:nowIso()}).then(()=>toast("已移到「"+stageName(t.value)+"」")).catch(x=>toast(dbErr(x)))}
   if(t.id==="restoreFile"&&t.files[0]){restoreFrom(t.files[0]);t.value=""}
 });
+document.addEventListener("input",e=>{if(e.target.id==="dailyTxt"){const a=document.getElementById("dailyWa");if(a)a.href=waLink(e.target.value)}});
 document.addEventListener("submit",async e=>{
+  if(e.target.id==="bossForm"){e.preventDefault();const v=(e.target.bossPhone.value||"").trim();
+    if(v&&phoneDigits(v).length<9){toast("号码看起来太短，请检查");return}
+    try{await db.doc("settings/main").set(Object.assign({},S.settings,{bossPhone:v,updatedAt:nowIso()}));toast(v?"已保存上司的号码":"已清除上司的号码")}catch(x){toast(dbErr(x))}
+    return}
   if(e.target.id==="gdForm"){e.preventDefault();const d=formData(e.target),msg=document.getElementById("gdMsg");
     if(!gdOk(d.gdriveUrl)){msg.textContent="网址不对。应该是 https://script.google.com/macros/s/…/exec 这样的格式。";return}
     msg.style.color="";msg.textContent="正在测试连接…";
