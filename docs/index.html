@@ -102,6 +102,7 @@ h3{font-size:14px;margin:0;font-weight:700}
 .btn.big:hover{filter:brightness(.97)}
 .btn.mid{padding:7px 14px;font-weight:700;border-radius:10px;gap:7px}
 .btn.mid svg{width:18px;height:18px}
+.btn.act-btn{background:var(--c-work-bg);color:var(--c-work);border-color:transparent}
 .ta{position:relative}
 .ta-list{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);z-index:5;max-height:300px;overflow:auto;padding:4px}
 .ta-item{display:flex;flex-wrap:wrap;align-items:center;gap:6px;width:100%;text-align:left;border:0;background:none;padding:9px 10px;border-radius:8px;cursor:pointer;color:var(--ink);font-size:14px}
@@ -719,7 +720,8 @@ function vCalendar(){
     <div class="row">
       <div class="seg"><button data-act="calMode" data-m="week" aria-pressed="${S.calMode==="week"}">周</button><button data-act="calMode" data-m="day" aria-pressed="${S.calMode==="day"}">日</button></div>
       <button class="btn sm" data-act="calNav" data-n="-1" aria-label="上一段">‹</button><button class="btn sm" data-act="calNav" data-n="0">今天</button><button class="btn sm" data-act="calNav" data-n="1" aria-label="下一段">›</button>
-      <button class="btn mid primary" data-act="newActivity">${IC_CAL}新活动</button>
+      <button class="btn mid primary" data-act="newMeeting">${IC_NOTE}记录会面</button>
+      <button class="btn mid act-btn" data-act="newActivity">${IC_CAL}新活动</button>
       <label class="row sub" style="font-size:12px;gap:4px"><input type="checkbox" id="calA" ${S.calA?"checked":""}> 只看 A 级</label>
       <div class="legend cal-legend"><span><i class="dot client"></i>客户</span><span><i class="dot work"></i>会议/培训</span><span><i class="dot recruit"></i>招聘</span><span><i class="dot personal"></i>个人</span></div></div></div>
   ${unscheduled.length?`<div class="banner">有 ${unscheduled.length} 个活动没有时间，所以不在日历格子里：${unscheduled.map(a=>`<a href="#" data-act="${itemAct(a)}" data-id="${a.id}">${esc(evTitle(a))}</a>`).join("、")}</div>`:""}
@@ -1372,7 +1374,8 @@ function meetingForm(m,pre={}){
 function activityForm(a,pre={}){
   const isNew=!a;a=a||Object.assign({cat:"work",date:today(),start:"10:00",end:"11:00",status:"planned",clientId:pre.cid||""},pre);
   modal(isNew?"新活动":"活动详情",`<form id="af" class="form" novalidate>
-    <div class="full"><div class="seg" role="radiogroup" aria-label="类别">${Object.entries(CATS).map(([k,v])=>`<button type="button" data-cat="${k}" aria-pressed="${a.cat===k}"><span class="dot ${k}"></span> ${v}</button>`).join("")}</div><input type="hidden" name="cat" value="${esc(a.cat)}"></div>
+    <div class="full"><div class="seg" role="radiogroup" aria-label="类别">${Object.entries(CATS).filter(([k])=>!isNew||k!=="client").map(([k,v])=>`<button type="button" data-cat="${k}" aria-pressed="${a.cat===k}"><span class="dot ${k}"></span> ${v}</button>`).join("")}</div><input type="hidden" name="cat" value="${esc(a.cat)}"></div>
+    ${isNew?`<div class="full hint">要记录跟客户的会面，请用「记录会面」按钮。</div>`:""}
     <label class="f full" id="afClientW"><span>客户</span><select name="clientId"><option value="">— 不连接客户 —</option>${clientOptions(a.clientId)}</select></label>
     <label class="f full"><span>标题</span><input type="text" name="title" list="titleList" autocomplete="off" value="${esc(a.title)}" placeholder="${titleList().length?"打字会跳出以前用过的标题；客户会面可留空":"客户会面可留空，会自动用客户名字"}"></label>
     <datalist id="titleList">${titleList().map(t=>`<option value="${esc(t)}"></option>`).join("")}</datalist>
@@ -1629,7 +1632,7 @@ const A={
   toggleMeet:d=>{S.meetOpen.has(d.id)?S.meetOpen.delete(d.id):S.meetOpen.add(d.id);render()},
   newClient:()=>clientForm(null),
   editClient:d=>clientForm(byId("clients",d.id)),
-  newMeeting:d=>meetingForm(null,{cid:d.cid||(S.view==="clients"?S.clientId:"")||"",ch:d.ch}),
+  newMeeting:d=>meetingForm(null,{cid:d.cid||(S.view==="clients"?S.clientId:"")||"",ch:d.ch,date:S.view==="calendar"&&S.calMode==="day"?S.calDay:undefined}),
   editMeeting:(d,_,e)=>{if(e)e.preventDefault();const m=byId("meetings",d.id);if(m)meetingForm(m)},
   newActivity:d=>d.cid?meetingForm(null,{cid:d.cid,fromCal:true}):activityForm(null,{date:S.view==="calendar"&&S.calMode==="day"?S.calDay:today(),cat:"work"}),
   editActivity:(d,_,e)=>{e.preventDefault();const a=byId("activities",d.id);if(a)activityForm(a,{occDate:a.repeat?d.d:""})},
