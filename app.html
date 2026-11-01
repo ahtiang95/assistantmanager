@@ -337,9 +337,9 @@ const PRIO_ICON={
 const CATS={client:"客户会面",work:"会议/课程/培训",personal:"个人事务"};
 const ACT_ST={planned:"计划中",done:"已完成",cancelled:"已取消",rescheduled:"已改期"};
 const CHANNELS={wa:"WhatsApp",f2f:"面对面",phone:"电话",online:"线上会议",other:"其他"};
-/* channels ordered by how often SIM has used them (WhatsApp wins ties); the first one is the default for a new meeting */
+/* WhatsApp is always first and the default; the other channels follow by how often SIM has used them */
 function channelOrder(){const n={};for(const m of S.meetings)if(CHANNELS[m.channel])n[m.channel]=(n[m.channel]||0)+1;
-  const keys=Object.keys(CHANNELS);return keys.sort((a,b)=>(n[b]||0)-(n[a]||0)||keys.indexOf(a)-keys.indexOf(b))}
+  const keys=Object.keys(CHANNELS).filter(k=>k!=="wa");return ["wa",...keys.sort((a,b)=>(n[b]||0)-(n[a]||0)||keys.indexOf(a)-keys.indexOf(b))]}
 /* personal-sales details on a meeting: what was typed before comes first, then a few starting suggestions */
 const SUG_SEEDS={
   plan:["保障规划","医疗规划","重疾规划","储蓄规划","教育规划","退休规划","遗产规划","投资规划"],
@@ -1210,8 +1210,9 @@ function meetingForm(m,pre={}){
       <label><input type="radio" name="module" value="sales" ${mod==="sales"?"checked":""}><span>${ICONS.reports}个人销售</span></label>
       <label><input type="radio" name="module" value="recruit" ${mod==="recruit"?"checked":""}><span>${ICONS.clients}招聘</span></label></div></div>
     <div class="f req full" id="mfSalesW"><span>个人销售：属于哪个阶段</span><div class="stage-pick" id="mfStage" role="radiogroup" aria-label="个人销售阶段">${picker(STAGES,STAGE_COLOR,"stage",stage)}</div></div>
-    <div class="full form sales-info" id="mfSalesInfo">${sugField("plan","目前谈的规划",m.plan,6)}${sugField("ptype","保单类型",m.ptype,6)}${sugField("response","客户回应",m.response,7)}</div>
     <div class="f req full" id="mfRecW"><span>招聘：属于哪个阶段</span><div class="stage-pick" id="mfRStage" role="radiogroup" aria-label="招聘阶段">${picker(RSTAGES,RSTAGE_COLOR,"rstage",rstage)}</div></div>
+    <label class="f full"><span>讨论摘要（选填）</span><textarea name="summary" id="mfSummary" placeholder="${esc(STAGE_HINTS[stage])}">${esc(m.summary)}</textarea></label>
+    <div class="full form sales-info" id="mfSalesInfo">${sugField("plan","目前谈的规划",m.plan,6)}${sugField("ptype","保单类型",m.ptype,6)}${sugField("response","客户回应",m.response,7)}</div>
     <div class="full close-box" id="mfClose">
       <label class="f req"><span>成交 ANP（RM）</span><input type="number" name="anp" min="0" step="1" value="${esc(dl0?(dl0.premium??dl0.estPremium??""):"")}" placeholder="例如 3600"></label>
       <label class="f"><span>成交保单张数</span><input type="number" name="policies" min="1" max="20" step="1" value="${esc(dl0?(dl0.policies||1):1)}"></label>
@@ -1221,7 +1222,6 @@ function meetingForm(m,pre={}){
     <div class="f full" id="mfRPrioW"><span>招聘会后优先级</span><div class="prio-pick" role="radiogroup" aria-label="招聘会后优先级">${RPRIO.map(([k,t,dsc],i)=>`<label class="${["pp-A","pp-B2","pp-C"][i]}"><input type="radio" name="rprio" value="${k}" ${k===((c&&c.rprio)||"A")?"checked":""}><span>${[PRIO_ICON.A,PRIO_ICON.B2,PRIO_ICON.C][i]}<b>${k} · ${t}</b><small>${dsc}</small></span></label>`).join("")}</div>
       <div id="mfRReason" hidden><div class="hint" style="margin:8px 0 6px">不再跟进的原因：</div><div class="stage-pick" role="radiogroup" aria-label="不再跟进的原因">${RC_REASONS.map(x=>`<label><input type="radio" name="rreason" value="${x}" ${c&&c.rreason===x?"checked":""}><span>${x}</span></label>`).join("")}</div></div></div>
     <div class="full hint" id="mfPrioClosed" hidden>选了 Closing 成交：这位客户会变成「成交客户」，不再分优先级，可以在「成交客户」页查看。</div>
-    <label class="f full"><span>讨论摘要（选填）</span><textarea name="summary" id="mfSummary" placeholder="${esc(STAGE_HINTS[stage])}">${esc(m.summary)}</textarea></label>
     <label class="f full"><span>下一步行动</span><input type="text" name="nextAction" value="${esc(m.nextAction)}" placeholder="例如：发修改后的方案给客户"></label>
     <div class="f full"><span>下次跟进日期</span>
       <div class="fu-row"><input type="date" name="nextFollowUp" value="${esc(m.nextFollowUp)}">
