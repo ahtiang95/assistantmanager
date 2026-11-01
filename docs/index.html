@@ -358,6 +358,17 @@ const CHANNELS={wa:"WhatsApp",f2f:"面对面",phone:"电话",online:"线上会�
 /* channels ordered by how often SIM has used them (WhatsApp wins ties); the first one is the default for a new meeting */
 function channelOrder(){const n={};for(const m of S.meetings)if(CHANNELS[m.channel])n[m.channel]=(n[m.channel]||0)+1;
   const keys=Object.keys(CHANNELS);return keys.sort((a,b)=>(n[b]||0)-(n[a]||0)||keys.indexOf(a)-keys.indexOf(b))}
+/* personal-sales details on a meeting: what was typed before comes first, then a few starting suggestions */
+const SUG_SEEDS={
+  plan:["保障规划","医疗规划","重疾规划","储蓄规划","教育规划","退休规划","遗产规划","投资规划"],
+  ptype:["医药卡","重疾险","人寿保险","储蓄保险","投资相联 (ILP)","意外保险","伊斯兰保险 (Takaful)","MLTA 房贷保障"],
+  response:["回应良好","有兴趣，考虑中","没回复","要和家人商量","预算不足","已有保障","拒绝"]};
+function sugValues(field){const n={};for(const m of S.meetings){const v=String(m[field]||"").trim();if(v)n[v]=(n[v]||0)+1}
+  return [...new Set([...Object.keys(n).sort((a,b)=>n[b]-n[a]),...(SUG_SEEDS[field]||[])])]}
+function sugField(name,label,val,chips){const vals=sugValues(name);
+  return `<div class="f full"><span>${label}</span><input type="text" name="${name}" list="dl_${name}" autocomplete="off" value="${esc(val||"")}" placeholder="打字，或点下面的选项">
+    <datalist id="dl_${name}">${vals.map(v=>`<option value="${esc(v)}"></option>`).join("")}</datalist>
+    <div class="fu-quick" style="margin-top:6px">${vals.slice(0,chips).map(v=>`<button type="button" class="btn sm" data-sug="${name}" data-v="${esc(v)}" aria-pressed="${v===val}">${esc(v)}</button>`).join("")}</div></div>`}
 /* quick picks for the next follow-up date, counted from the meeting date */
 const FU_QUICK=[["1d","1 天后"],["3d","3 天后"],["1w","1 个星期后"],["2w","2 个星期后"],["1m","1 个月后"],["3m","3 个月后"]];
 function addPeriod(base,k){const n=parseInt(k),u=k.slice(-1);if(u==="d")return addDays(base,n);if(u==="w")return addDays(base,7*n);
@@ -793,7 +804,7 @@ function mountCalendar(keepScroll){
     if(e.target!==col)return;
     const r=col.getBoundingClientRect(),hour=r.height/16;
     let m=420+Math.floor((e.clientY-r.top)/hour*2)*30;m=Math.min(Math.max(m,420),1350);
-    activityForm(null,{date:col.dataset.date,start:fromMin(m),end:fromMin(Math.min(m+60,1380))});
+    meetingForm(null,{date:col.dataset.date,start:fromMin(m),end:fromMin(Math.min(m+60,1380)),fromCal:true});
   }));
   const cb=document.getElementById("calA");if(cb)cb.onchange=()=>{S.calA=cb.checked;render()};
 }
@@ -853,7 +864,7 @@ function vClient(){
 function meetingTL(m){
   const L=(k,v)=>v?`<p><span class="lbl">${k}</span>${esc(v)}</p>`:"";
   return `<div class="tl-item"><div class="row"><b>${fmtD(m.date)}</b><span class="sub num">${esc(m.start||"")}${m.end?"–"+esc(m.end):""}</span><span class="chip">${CHANNELS[m.channel]||"其他"}</span>${meetChip(m)}${exChip(m)}<button class="btn sm ghost" data-act="editMeeting" data-id="${m.id}">编辑</button></div>
-    ${L("讨论：",m.summary)}${L("需求：",m.needs)}${L("问题与顾虑：",m.concerns)}${L("异议/延迟原因：",m.objections)}${L("讨论的方案：",m.solutions)}${L("提供的文件：",m.docs)}${L("结果：",m.outcome)}${L("下一步：",m.nextAction)}${m.nextFollowUp?`<p><span class="lbl">下次跟进：</span>${fmtD(m.nextFollowUp)}</p>`:""}${L("备注：",m.notes)}</div>`;
+    ${L("规划：",m.plan)}${L("保单类型：",m.ptype)}${m.response?`<p><span class="lbl">客户回应：</span><span class="chip">${esc(m.response)}</span></p>`:""}${L("讨论：",m.summary)}${L("需求：",m.needs)}${L("问题与顾虑：",m.concerns)}${L("异议/延迟原因：",m.objections)}${L("讨论的方案：",m.solutions)}${L("提供的文件：",m.docs)}${L("结果：",m.outcome)}${L("下一步：",m.nextAction)}${m.nextFollowUp?`<p><span class="lbl">下次跟进：</span>${fmtD(m.nextFollowUp)}</p>`:""}${L("备注：",m.notes)}</div>`;
 }
 function renderSummary(c,sum){
   const d=sum.data||{};const ul=a=>Array.isArray(a)&&a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:'<div class="sub">记录中没有</div>';
@@ -1200,6 +1211,7 @@ function meetingForm(m,pre={}){
   const dl0=m.dealId?byId("deals",m.dealId):null;
   const picker=(list,colors,name,sel)=>list.map(([k,zh,en])=>`<label><input type="radio" name="${name}" value="${k}" ${k===sel?"checked":""}><span><i class="sw" style="background:${colors[k]}"></i>${en}<small>${zh}</small></span></label>`).join("");
   modal(isNew?"记录会面":"编辑会面记录",`<form id="mf" class="form" novalidate>
+    ${isNew&&pre.fromCal?`<div class="full"><div class="seg" role="group" aria-label="类别">${Object.entries(CATS).map(([k,v])=>`<button type="button" data-tocat="${k}" aria-pressed="${k==="client"}"><span class="dot ${k}"></span> ${v}</button>`).join("")}</div></div>`:""}
     <div class="f req full"><span>客户名字</span>
       <div class="ta"><input type="text" id="mfQ" autocomplete="off" placeholder="直接输入客户名字或电话" value="${esc(c?c.name:"")}" role="combobox" aria-expanded="false" aria-controls="mfList">
         <div class="ta-list" id="mfList" role="listbox" hidden></div></div>
@@ -1215,6 +1227,7 @@ function meetingForm(m,pre={}){
       <label><input type="radio" name="module" value="sales" ${mod==="sales"?"checked":""}><span>${ICONS.reports}个人销售</span></label>
       <label><input type="radio" name="module" value="recruit" ${mod==="recruit"?"checked":""}><span>${ICONS.clients}招聘</span></label></div></div>
     <div class="f req full" id="mfSalesW"><span>个人销售：属于哪个阶段</span><div class="stage-pick" id="mfStage" role="radiogroup" aria-label="个人销售阶段">${picker(STAGES,STAGE_COLOR,"stage",stage)}</div></div>
+    <div class="full form sales-info" id="mfSalesInfo">${sugField("plan","目前谈的规划",m.plan,6)}${sugField("ptype","保单类型",m.ptype,6)}${sugField("response","客户回应",m.response,7)}</div>
     <div class="f req full" id="mfRecW"><span>招聘：属于哪个阶段</span><div class="stage-pick" id="mfRStage" role="radiogroup" aria-label="招聘阶段">${picker(RSTAGES,RSTAGE_COLOR,"rstage",rstage)}</div></div>
     <div class="full close-box" id="mfClose">
       <label class="f req"><span>成交 ANP（RM）</span><input type="number" name="anp" min="0" step="1" value="${esc(dl0?(dl0.premium??dl0.estPremium??""):"")}" placeholder="例如 3600"></label>
@@ -1246,6 +1259,7 @@ function meetingForm(m,pre={}){
       sw.querySelectorAll("input").forEach(i=>i.disabled=sw.hidden);rw.querySelectorAll("input").forEach(i=>i.disabled=rw.hidden);
       cb.hidden=!(md==="sales"&&f.elements.stage.value==="closing");cb.querySelectorAll("input").forEach(i=>i.disabled=cb.hidden);
       const pw=r.querySelector("#mfPrioW");pw.hidden=!cb.hidden||md!=="sales";pw.querySelectorAll("input").forEach(i=>i.disabled=pw.hidden);r.querySelector("#mfPrioClosed").hidden=cb.hidden;
+      const si=r.querySelector("#mfSalesInfo");si.hidden=md!=="sales";si.querySelectorAll("input").forEach(i=>i.disabled=si.hidden);
       const rpw=r.querySelector("#mfRPrioW"),rrw=r.querySelector("#mfRReason");rpw.hidden=md!=="recruit";rpw.querySelectorAll("input").forEach(i=>i.disabled=rpw.hidden);
       rrw.hidden=rpw.hidden||f.elements.rprio.value!=="C";rrw.querySelectorAll("input").forEach(i=>i.disabled=rrw.hidden);
       sm.placeholder=md==="sales"?(STAGE_HINTS[f.elements.stage.value]||""):"招聘：这次谈了什么、对方对这份事业的兴趣和顾虑、下一步（讲座、定位、考试、签约）"}
@@ -1275,6 +1289,10 @@ function meetingForm(m,pre={}){
       const ex=S.clients.find(c=>normName(c.name)===normName(q.value));ex?pick(ex):askNew()},150));
     syncNew();
     f.start.addEventListener("change",()=>{const s=toMin(f.start.value);if(s!=null)setTime(f.end,fromMin(Math.min(s+60,1380)))});
+    r.querySelectorAll("[data-sug]").forEach(b=>b.onclick=()=>{const inp=f.elements[b.dataset.sug];inp.value=b.dataset.v;
+      r.querySelectorAll(`[data-sug="${b.dataset.sug}"]`).forEach(x=>x.setAttribute("aria-pressed",String(x===b)))});
+    r.querySelectorAll("[data-tocat]").forEach(b=>b.onclick=()=>{if(b.dataset.tocat==="client")return;const v=formData(f);closeModal();
+      activityForm(null,{cat:b.dataset.tocat,date:isDate(v.date)?v.date:today(),start:v.start||pre.start||"10:00",end:v.end||pre.end||"11:00"})});
     const fuBtns=[...r.querySelectorAll("[data-fu]")],markFu=k=>fuBtns.forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.fu===k)));
     fuBtns.forEach(b=>b.onclick=()=>{const base=isDate(f.date.value)?f.date.value:today();f.nextFollowUp.value=addPeriod(base,b.dataset.fu);markFu(b.dataset.fu)});
     f.nextFollowUp.addEventListener("change",()=>markFu(""));
@@ -1285,7 +1303,7 @@ function meetingForm(m,pre={}){
       if(!c&&cid==="__new"&&nmNew)c={name:nmNew,dob:d.dob,occupation:d.occupation,income:d.income===""?null:num(d.income),gender:d.gender,smoker:d.smoker,marital:d.marital,dependents:d.dependents===""?null:num(d.dependents),lang:d.lang,priority:d.priority,stage:"",nextFollowUp:"",nextAction:""};
       if(!c){out.textContent="请先在上面选好客户，或确认创建新客户。";return}
       const md=d.module==="recruit"?"recruit":"sales",stg=md==="recruit"?rstageName(d.rstage):stageName(d.stage);
-      const extra=[`日期：${d.date||"未填"}`,`方式：${CHANNELS[d.channel]||""}`,`模块：${md==="recruit"?"招聘":"个人销售"}`,`阶段：${stg}`,`讨论摘要：${d.summary||"未填"}`,`结果：${d.outcome||"未填"}`,`下一步：${d.nextAction||"未填"}`,`下次跟进：${d.nextFollowUp||"未填"}`,d.anp?`成交 ANP：RM ${d.anp}，${d.policies||1} 张，产品：${d.product||"未填"}`:""].filter(Boolean).join("\n");
+      const extra=[`日期：${d.date||"未填"}`,`方式：${CHANNELS[d.channel]||""}`,`模块：${md==="recruit"?"招聘":"个人销售"}`,`阶段：${stg}`,md==="sales"?`目前谈的规划：${d.plan||"未填"}`:"",md==="sales"?`保单类型：${d.ptype||"未填"}`:"",md==="sales"?`客户回应：${d.response||"未填"}`:"",`讨论摘要：${d.summary||"未填"}`,`下一步：${d.nextAction||"未填"}`,`下次跟进：${d.nextFollowUp||"未填"}`,d.anp?`成交 ANP：RM ${d.anp}，${d.policies||1} 张，产品：${d.product||"未填"}`:""].filter(Boolean).join("\n");
       aiB.disabled=true;out.className="";out.innerHTML=`<div class="empty">AI 大师正在分析「${esc(c.name)}」…（第一次使用会先请你允许）</div>`;
       try{const data=await sample.json(masterPrompt(c,extra),{modelTier:"default"});
         if(!data||typeof data!=="object")throw{code:"invalid_json"};
@@ -1321,6 +1339,7 @@ function meetingForm(m,pre={}){
           cid=newId("clients");const cdat=cleanClient(d);cdat.stage=md==="sales"?stg2:"";cdat.rstage=md==="recruit"?stg2:"";cdat.lang="zh";cdat.priority=md==="recruit"||anp!=null?"":(d.priority||"B1");if(md==="recruit"){cdat.rprio=rp;cdat.rreason=rr}
           await put("clients",cid,Object.assign(cdat,{firstContact:d.date,createdAt:nowIso(),updatedAt:nowIso(),status:"active"}))}
         const rec={clientId:cid,date:d.date,start:d.start||"",end:d.end||"",channel:d.channel,module:md,stage:stg2,rprio:rp,rreason:rr,summary:d.summary||"",outcome:m.outcome||"",nextAction:d.nextAction||"",nextFollowUp:d.nextFollowUp||"",
+          plan:md==="sales"?(d.plan||""):(m.plan||""),ptype:md==="sales"?(d.ptype||""):(m.ptype||""),response:md==="sales"?(d.response||""):(m.response||""),
           needs:m.needs||"",concerns:m.concerns||"",objections:m.objections||"",solutions:m.solutions||"",docs:m.docs||"",notes:m.notes||"",updatedAt:nowIso()};
         const mid=isNew?newId("meetings"):m.id;
         if(isNew){rec.createdAt=nowIso();if(pre.activityId)rec.activityId=pre.activityId}
@@ -1347,7 +1366,7 @@ function meetingForm(m,pre={}){
 
 /* ---------- activity form ---------- */
 function activityForm(a,pre={}){
-  const isNew=!a;a=a||Object.assign({cat:pre.cid?"client":"client",date:today(),start:"10:00",end:"11:00",status:"planned",clientId:pre.cid||""},pre);
+  const isNew=!a;a=a||Object.assign({cat:"work",date:today(),start:"10:00",end:"11:00",status:"planned",clientId:pre.cid||""},pre);
   modal(isNew?"新活动":"活动详情",`<form id="af" class="form" novalidate>
     <div class="full"><div class="seg" role="radiogroup" aria-label="类别">${Object.entries(CATS).map(([k,v])=>`<button type="button" data-cat="${k}" aria-pressed="${a.cat===k}"><span class="dot ${k}"></span> ${v}</button>`).join("")}</div><input type="hidden" name="cat" value="${esc(a.cat)}"></div>
     <label class="f full" id="afClientW"><span>客户</span><select name="clientId"><option value="">— 不连接客户 —</option>${clientOptions(a.clientId)}</select></label>
@@ -1368,7 +1387,8 @@ function activityForm(a,pre={}){
     <div class="modal-f full">${isNew?"":`<button type="button" class="btn danger" id="afDel" style="margin-right:auto">${a.repeat?"删除全部重复":"删除"}</button>`}${!isNew&&a.repeat&&pre.occDate?`<button type="button" class="btn" id="afSkip">只删除这一次</button>`:""}${!isNew&&a.cat==="client"&&a.clientId?`<button type="button" class="btn" id="afMeet">完成并记录会面</button>`:""}<button type="button" class="btn" data-act="closeModal">取消</button><button class="btn primary" type="submit" id="afSave">保存</button></div></form>`,{onMount:r=>{
     const f=r.querySelector("#af"),cw=r.querySelector("#afClientW");let conflictOk=false;
     const syncCat=()=>{cw.hidden=f.cat.value!=="client";r.querySelectorAll("[data-cat]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.cat===f.cat.value))};
-    r.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{f.cat.value=b.dataset.cat;syncCat()});syncCat();
+    /* a new client meeting is recorded straight away in the meeting form (type the client's name there) */
+    r.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{if(isNew&&b.dataset.cat==="client"){const v=formData(f);closeModal();meetingForm(null,{date:v.date,start:v.start,end:v.end,fromCal:true});return}f.cat.value=b.dataset.cat;syncCat()});syncCat();
     f.start.onchange=()=>{const s=toMin(f.start.value);if(s!=null)setTime(f.end,fromMin(Math.min(s+60,1380)));conflictOk=false};
     f.end.onchange=f.date.onchange=()=>{conflictOk=false};
     const syncRep=()=>{const w=r.querySelector("#afUntilW");w.hidden=!f.repeat.value;f.repeatUntil.disabled=w.hidden};f.repeat.onchange=syncRep;syncRep();
@@ -1441,7 +1461,7 @@ function clientDossier(c){
   const L=[`今天日期：${today()}`,`客户姓名：${c.name}`,`年龄：${ageOf(c.dob)??"未记录"}`,`职业：${c.occupation||"未记录"}`,`月薪：${c.income!=null&&c.income!==""?rm(c.income):"未记录"}`,`性别：${GENDER[c.gender||""]}`,`是否吸烟：${SMOKER[c.smoker||""]}`,`婚姻状况：${MARITAL[c.marital||""]}`,`需要照顾的家人：${c.dependents!=null&&c.dependents!==""?c.dependents+" 人":"未记录"}`,
     `沟通语言：${LANGS[c.lang]||"中文"}`,`优先级：${c.priority||"未设定"}`,`目前销售阶段：${stageName(c.stage)}`,`首次接触：${c.firstContact||"未记录"}`,`最近联系：${c.lastContact||"未记录"}`,
     `下次跟进：${c.nextFollowUp||"未设定"}`,`下一步行动：${c.nextAction||"未记录"}`,`目前在等：${WAITING[c.waitingOn||"none"]}`,`保险需求：${c.needs||"未记录"}`,`现有保障与缺口：${c.coverage||"未记录"}`,`未解决顾虑：${c.concerns||"未记录"}`,`备注：${c.notes||"无"}`,"",`会面记录（由早到晚，共 ${ms.length} 次）：`];
-  ms.forEach((m,i)=>L.push(`#${i+1} ${m.date} ${CHANNELS[m.channel]||""} 阶段=${m.module==="recruit"?"招聘·"+rstageName(m.stage):stageName(m.stage)}\n讨论：${m.summary||""}\n需求：${m.needs||""}\n顾虑：${m.concerns||""}\n异议/延迟：${m.objections||""}\n方案：${m.solutions||""}\n文件：${m.docs||""}\n结果：${m.outcome||""}\n下一步：${m.nextAction||""}\n下次跟进：${m.nextFollowUp||""}\n备注：${m.notes||""}`));
+  ms.forEach((m,i)=>L.push(`#${i+1} ${m.date} ${CHANNELS[m.channel]||""} 阶段=${m.module==="recruit"?"招聘·"+rstageName(m.stage):stageName(m.stage)}\n规划：${m.plan||""}\n保单类型：${m.ptype||""}\n客户回应：${m.response||""}\n讨论：${m.summary||""}\n需求：${m.needs||""}\n顾虑：${m.concerns||""}\n异议/延迟：${m.objections||""}\n方案：${m.solutions||""}\n文件：${m.docs||""}\n结果：${m.outcome||""}\n下一步：${m.nextAction||""}\n下次跟进：${m.nextFollowUp||""}\n备注：${m.notes||""}`));
   L.push("",`保单记录（${deals.length}）：`);deals.forEach(d=>L.push(`- ${d.product}｜${DEAL_ST[d.status]}｜预估保费 ${d.estPremium??"未填"}｜提交 ${d.submitDate||"-"}｜生效 ${d.inforceDate||"-"}｜备注 ${d.notes||""}`));
   return L.join("\n").slice(0,60000);
 }
@@ -1607,7 +1627,7 @@ const A={
   editClient:d=>clientForm(byId("clients",d.id)),
   newMeeting:d=>meetingForm(null,{cid:d.cid||(S.view==="clients"?S.clientId:"")||"",ch:d.ch}),
   editMeeting:(d,_,e)=>{if(e)e.preventDefault();const m=byId("meetings",d.id);if(m)meetingForm(m)},
-  newActivity:d=>activityForm(null,d.cid?{cid:d.cid,clientId:d.cid,cat:"client"}:{date:S.view==="calendar"&&S.calMode==="day"?S.calDay:today()}),
+  newActivity:d=>d.cid?meetingForm(null,{cid:d.cid,fromCal:true}):activityForm(null,{date:S.view==="calendar"&&S.calMode==="day"?S.calDay:today(),cat:"work"}),
   editActivity:(d,_,e)=>{e.preventDefault();const a=byId("activities",d.id);if(a)activityForm(a,{occDate:a.repeat?d.d:""})},
   newDeal:d=>dealForm(null,{cid:d.cid}),
   editDeal:d=>dealForm(byId("deals",d.id)),
