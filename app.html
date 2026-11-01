@@ -148,6 +148,14 @@ h3{font-size:14px;margin:0;font-weight:700}
 .fu-row input[type=date]{max-width:200px}
 .fu-quick{display:flex;flex-wrap:wrap;gap:6px}
 .fu-quick .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.goal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.goal{background:var(--surface2);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.goal-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.goal-pct{font-size:20px;font-weight:700;color:var(--accent)}
+.goal-bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden}
+.goal-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#3cc4b4,#1e5a7d)}
+.goal-v{font-size:14px;color:var(--muted)}.goal-v b{font-size:17px;color:var(--ink)}
+@media (max-width:820px){.goal-grid{grid-template-columns:minmax(0,1fr);gap:8px}.goal{padding:10px 12px}}
 .ai-master{background:#e3f2f5;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .chip.ex{border:1px dashed var(--muted);background:none}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
@@ -679,6 +687,43 @@ const BTN_CLIENT=`<button class="btn big teal" data-act="newClient">${IC_PERSON}
 const BTN_ACT=`<button class="btn big blue" data-act="newActivity">${IC_CAL}新活动</button>`;
 
 /* ---------- views: home ---------- */
+/* this year's goals on the home page: NB (ANP) and NOC (policies) come from closed policies by submit date; QFYLP progress is typed in by SIM */
+function goalsPanel(){
+  const y=today().slice(0,4),g=(S.settings.goals||{})[y]||{},c=closedIn(`${y}-01-01`,`${y}-12-31`);
+  const weeksLeft=Math.max(1,Math.ceil((daysBetween(today(),`${y}-12-31`)+1)/7));
+  const has=["nb","qfylp","noc"].some(k=>Number(g[k])>0);
+  if(!has)return `<section class="panel goals"><div class="panel-h"><h2 class="ttl">${ic("star")}${y} 年目标</h2></div>
+    <div class="row" style="justify-content:space-between"><span class="sub">设定今年的 NB（ANP）、QFYLP 和 NOC 目标，App 会帮你算进度和每周要做多少。</span><button class="btn primary" data-act="editGoals">设定目标</button></div></section>`;
+  const money=v=>rm(v),cnt=v=>`${Math.round(v*10)/10} 张`;
+  const card=(key,label,done,target,fmt,note)=>{target=Number(target)||0;
+    if(!target)return `<div class="goal"><div class="goal-h"><b>${label}</b></div><div class="sub">还没设定目标</div></div>`;
+    const pct=Math.min(100,done/target*100),left=Math.max(0,target-done);
+    return `<div class="goal"><div class="goal-h"><b>${label}</b><span class="num goal-pct">${Math.floor(done/target*100)}%</span></div>
+      <div class="goal-bar"><i style="width:${pct}%"></i></div>
+      <div class="num goal-v"><b>${fmt(done)}</b> / ${fmt(target)}</div>
+      <div class="hint">${left>0?`还差 ${fmt(left)} · 平均每周 ${fmt(left/weeksLeft)}`:"已达标，继续加油"}${note?` · ${note}`:""}</div></div>`};
+  return `<section class="panel goals"><div class="panel-h"><h2 class="ttl">${ic("star")}${y} 年目标</h2><span class="sub">今年还剩 ${weeksLeft} 周</span>
+      <button class="btn sm" data-act="editGoals">更新目标 / QFYLP</button></div>
+    <div class="goal-grid">${card("nb","NB（ANP）",c.anp,g.nb,money,"按成交保单自动计算")}${card("qfylp","QFYLP",Number(g.qfylpDone)||0,g.qfylp,money,g.qfylpAt?`手动更新于 ${fmtD(g.qfylpAt)}`:"手动更新")}${card("noc","NOC（保单张数）",c.n,g.noc,cnt,"按成交保单自动计算")}</div></section>`;
+}
+function goalsForm(){
+  const y=today().slice(0,4),g=(S.settings.goals||{})[y]||{};
+  modal(`${y} 年目标`,`<form id="gf" class="form" novalidate>
+    <label class="f"><span>NB（ANP）目标（RM）</span><input type="number" name="nb" min="0" step="100" value="${esc(g.nb??"")}"></label>
+    <label class="f"><span>NOC 目标（保单张数）</span><input type="number" name="noc" min="0" step="1" value="${esc(g.noc??"")}"></label>
+    <label class="f"><span>QFYLP 目标（RM）</span><input type="number" name="qfylp" min="0" step="100" value="${esc(g.qfylp??"")}"></label>
+    <label class="f"><span>QFYLP 目前做到（RM，手动更新）</span><input type="number" name="qfylpDone" min="0" step="1" value="${esc(g.qfylpDone??"")}"></label>
+    <div class="hint full">NB（ANP）和 NOC 的进度会按「成交保单」自动计算（按提交日期，今年累计）。QFYLP 请按公司的数字自己更新。</div>
+    <div class="err full" id="gfErr"></div>
+    <div class="modal-f full"><button type="button" class="btn" data-act="closeModal">取消</button><button class="btn primary" type="submit">保存</button></div></form>`,{onMount:r=>{
+    const f=r.querySelector("#gf");f.onsubmit=async e=>{e.preventDefault();const d=formData(f),err=r.querySelector("#gfErr"),o={};
+      for(const k of ["nb","noc","qfylp","qfylpDone"]){if(d[k]===""){o[k]=null;continue}const n=num(d[k]);if(isNaN(n)||n<0)return err.textContent="请填正确的数字。";o[k]=n}
+      if(o.noc!=null&&!Number.isInteger(o.noc))return err.textContent="NOC 目标要是整数。";
+      if(o.qfylpDone!==(num(g.qfylpDone)??null))o.qfylpAt=today();else o.qfylpAt=g.qfylpAt||"";
+      const goals=Object.assign({},S.settings.goals||{},{[y]:o});
+      try{await db.doc("settings/main").set(Object.assign({},S.settings,{goals,updatedAt:nowIso()}));closeModal();toast("目标已保存")}catch(x){err.textContent=dbErr(x)}};
+  }});
+}
 function vHome(){
   const t=today(),fu=followups(),acts=actsOn(t);
   const drafts=S.drafts.filter(d=>d.status==="pending");
@@ -687,8 +732,9 @@ function vHome(){
   const bd=birthdaysSoon(7);
   const isEmpty=!S.clients.length;
   return `<div class="hero"><div class="hero-txt"><div class="sub">${fmtD(t)}</div><h1>今天先做什么</h1>
-    <div class="row" style="gap:10px">${BTN_CLIENT}${BTN_ACT}<button class="btn big navy" data-act="newMeeting">${IC_NOTE}记录会面</button></div></div>${weatherCard()}</div>
-  ${isEmpty?`<div class="panel"><h2>还没有客户</h2><p class="sub" style="margin:0">点「＋ 新客户」加入第一位客户，或在会面后直接点右下角「＋ 记录会面」，系统会同时建立客户资料。</p></div>`:""}
+    <div class="row" style="gap:10px"><button class="btn big navy" data-act="newMeeting">${IC_NOTE}记录会面</button>${BTN_ACT}</div></div>${weatherCard()}</div>
+  ${goalsPanel()}
+  ${isEmpty?`<div class="panel"><h2>还没有客户</h2><p class="sub" style="margin:0">点「记录会面」，打客户名字后按 Enter，就会同时建立客户资料。</p></div>`:""}
   ${drafts.length?`<div class="banner info">有 ${drafts.length} 条 WhatsApp 跟进草稿等你批准。 <button class="btn sm" data-act="go" data-v="agent">去查看</button></div>`:""}
   <div class="grid">
     <section class="panel"><div class="panel-h"><h2 class="ttl">${ic("calendar")}今天的行程</h2><button class="btn sm ghost" data-act="go" data-v="calendar">打开成功宝典</button></div>
@@ -1663,6 +1709,7 @@ const A={
   openClient:d=>{if(!d.id)return;S.view="clients";S.clientId=d.id;render();window.scrollTo(0,0)},
   backClients:()=>{S.clientId=null;render()},
   closedF:d=>{S.closedF=d.f;render()},
+  editGoals:()=>goalsForm(),
   toggleMeet:d=>{S.meetOpen.has(d.id)?S.meetOpen.delete(d.id):S.meetOpen.add(d.id);render()},
   newClient:()=>clientForm(null),
   editClient:d=>clientForm(byId("clients",d.id)),
