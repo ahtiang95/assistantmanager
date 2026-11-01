@@ -236,6 +236,7 @@ body.fit #fab{display:none}
 .ws-tile b{font-size:18px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ws-tile small{font-size:10px;color:var(--muted)}
 .cal-scroll{flex:1;min-height:0;overflow:auto}
+.swipe-hint{display:none;text-align:center;font-size:9.5px;color:var(--muted);margin-top:-2px}
 .cal{display:grid;grid-template-columns:44px repeat(var(--cols),minmax(0,1fr));grid-template-rows:auto minmax(0,1fr);height:100%;min-height:300px}
 .cal-dh{background:var(--surface);border-bottom:1px solid var(--line);padding:5px 4px;text-align:center;font-size:12px;cursor:pointer;z-index:2}
 .cal-dh b{display:block;font-size:14px;line-height:1.2}
@@ -300,17 +301,33 @@ tr.hot td:first-child{font-weight:700}
   body.fit .app{grid-template-rows:auto minmax(0,1fr)}
   body.fit main{padding-block:8px}
   .cal-legend{display:none}
-  /* phone week view: taller hours and wrapping small text so every name can be read in full */
-  .cal{grid-template-columns:30px repeat(var(--cols),minmax(0,1fr));min-height:660px}
-  .cal-gut span{font-size:8.5px;right:2px}
-  .cal-dh{font-size:10px;padding:4px 1px}.cal-dh b{font-size:11px}
-  .ev{font-size:10px;padding:2px 2px 2px 3px;border-left-width:3px;border-radius:5px;left:1px;right:1px;height:auto!important;min-height:var(--h);overflow:visible;z-index:1}
-  .ev b{white-space:normal;overflow:visible;text-overflow:clip;word-break:break-all;overflow-wrap:anywhere;line-height:1.15;font-weight:600}
+  /* phone week view: the whole week fits the screen with no scrolling — tiny wrapping text, boxes grow only to fit a long name;
+     swipe left / right on the calendar to change week */
+  body.fit .wrap{gap:6px}
+  .cal-page{gap:5px}
+  .cal-top{gap:4px}
+  .cal-top h1{font-size:14px;gap:6px}.cal-top h1 .ic{width:22px;height:22px}.cal-top h1 .ic svg{width:14px;height:14px}
+  .cal-top .row{gap:4px}
+  .cal-top .seg button{padding:4px 9px;font-size:12px}
+  .cal-top .btn.sm{padding:3px 8px}
+  .cal-top .btn.mid{padding:4px 9px;font-size:12px;gap:4px}.cal-top .btn.mid svg{width:14px;height:14px}
+  .cal-top label{display:none}
+  .cal-scroll{overflow:hidden;touch-action:pan-y}
+  .cal{grid-template-columns:24px repeat(var(--cols),minmax(0,1fr));min-height:0}
+  .cal-gut span{font-size:7px;right:1px;letter-spacing:-.2px}
+  .cal-dh{font-size:8.5px;padding:2px 0}.cal-dh b{font-size:9.5px}
+  .ev{font-size:8px;padding:1px 1px 1px 2px;border-left-width:2px;border-radius:3px;left:0;right:0;height:auto!important;min-height:var(--h);overflow:visible;z-index:1}
+  .ev b{white-space:normal;overflow:visible;text-overflow:clip;word-break:break-all;overflow-wrap:anywhere;line-height:1.08;font-weight:600}
   .ev i{display:none}
   .ev.done::after{display:none}
-  .wline svg{height:90px}
-  .ws-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-  .ws-tile{padding:5px 7px}.ws-tile b{font-size:15px}
+  .wline{padding:5px 8px 4px;gap:3px}
+  .wline .lg{font-size:9.5px;gap:2px 8px}
+  .wline svg{height:48px}
+  .ws-h{font-size:11px}
+  .ws-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+  .ws-tile{padding:3px 4px;border-top-width:2px}.ws-tile span{font-size:8.5px;gap:3px}.ws-tile span .sw{display:none}
+  .ws-tile b{font-size:11.5px}.ws-tile small{display:none}
+  .swipe-hint{display:block!important}
   .hero{padding:16px 18px}
   .hero{flex-direction:column;align-items:stretch}
   .wx{width:auto;max-width:none}
@@ -737,6 +754,7 @@ function vCalendar(){
     <div class="cal-dh" style="cursor:default"></div>${heads}
     <div class="cal-gut">${gut}</div>${cols}
   </div></div>
+  <div class="swipe-hint">← 左右滑动换${S.calMode==="week"?"周":"日"} →</div>
   ${weekLine(mondayOf(S.calMode==="week"?S.weekStart:S.calDay))}</div>`;
 }
 const STAGE_COLOR={prospect:"var(--s-prospect)",open:"var(--s-open)",present:"var(--s-present)",followup:"var(--s-followup)",closing:"var(--s-closing)"};
@@ -809,8 +827,15 @@ function layout(evs){
   if(cluster.length)flush();return out;
 }
 function mountCalendar(keepScroll){
+  /* swipe left = next week (or day), swipe right = previous; a tap that follows a swipe is ignored */
+  const sc=document.querySelector(".cal-scroll");let sx=null,sy=0,swiped=0;
+  if(sc){
+    sc.addEventListener("touchstart",e=>{if(e.touches.length!==1)return;sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
+    sc.addEventListener("touchend",e=>{if(sx==null)return;const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;sx=null;
+      if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5){swiped=Date.now();A.calNav({n:dx<0?"1":"-1"})}},{passive:true});
+  }
   document.querySelectorAll(".cal-col").forEach(col=>col.addEventListener("click",e=>{
-    if(e.target!==col)return;
+    if(e.target!==col||Date.now()-swiped<500)return;
     const r=col.getBoundingClientRect(),hour=r.height/16;
     let m=420+Math.floor((e.clientY-r.top)/hour*2)*30;m=Math.min(Math.max(m,420),1350);
     meetingForm(null,{date:col.dataset.date,start:fromMin(m),end:fromMin(Math.min(m+60,1380)),fromCal:true});
