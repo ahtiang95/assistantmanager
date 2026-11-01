@@ -159,6 +159,9 @@ h3{font-size:14px;margin:0;font-weight:700}
 .pp-B1 input:checked+span{border-color:var(--pB);background:var(--pB-bg)}
 .pp-B2 input:checked+span{border-color:#2d63a8;background:#e2ecf8}
 .pp-C input:checked+span{border-color:var(--pC);background:var(--pC-bg)}
+.rep-row{display:flex;align-items:center;gap:8px}
+.rep-row input{width:70px;flex:none}
+.rep-row select{flex:1}
 .fu-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .fu-row input[type=date]{max-width:200px}
 .fu-quick{display:flex;flex-wrap:wrap;gap:6px}
@@ -243,7 +246,13 @@ body.fit #fab{display:none}
 .wline .lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);align-items:center}
 .wline .lg span{display:inline-flex;align-items:center;gap:5px}
 .wline .lg b{color:var(--ink);font-variant-numeric:tabular-nums}
-.wline svg{display:block;width:100%;height:clamp(96px,17vh,140px)}
+.wline svg{display:block;width:100%;height:clamp(80px,13vh,118px)}
+.ws-h{font-size:13px;font-weight:700;display:flex;gap:8px;align-items:baseline}
+.ws-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.ws-tile{background:var(--surface2);border-radius:10px;padding:6px 10px;display:flex;flex-direction:column;gap:1px;min-width:0;border-top:3px solid var(--tc,var(--ok))}
+.ws-tile span{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;white-space:nowrap}
+.ws-tile b{font-size:18px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ws-tile small{font-size:10px;color:var(--muted)}
 .cal-scroll{flex:1;min-height:0;overflow:auto}
 .cal{display:grid;grid-template-columns:44px repeat(var(--cols),minmax(0,1fr));grid-template-rows:auto minmax(0,1fr);height:100%;min-height:300px}
 .cal-dh{background:var(--surface);border-bottom:1px solid var(--line);padding:5px 4px;text-align:center;font-size:12px;cursor:pointer;z-index:2}
@@ -309,6 +318,17 @@ tr.hot td:first-child{font-weight:700}
   body.fit .app{grid-template-rows:auto minmax(0,1fr)}
   body.fit main{padding-block:8px}
   .cal-legend{display:none}
+  /* phone week view: taller hours and wrapping small text so every name can be read in full */
+  .cal{grid-template-columns:30px repeat(var(--cols),minmax(0,1fr));min-height:660px}
+  .cal-gut span{font-size:8.5px;right:2px}
+  .cal-dh{font-size:10px;padding:4px 1px}.cal-dh b{font-size:11px}
+  .ev{font-size:10px;padding:2px 2px 2px 3px;border-left-width:3px;border-radius:5px;left:1px;right:1px;height:auto!important;min-height:var(--h);overflow:visible;z-index:1}
+  .ev b{white-space:normal;overflow:visible;text-overflow:clip;word-break:break-all;overflow-wrap:anywhere;line-height:1.15;font-weight:600}
+  .ev i{display:none}
+  .ev.done::after{display:none}
+  .wline svg{height:90px}
+  .ws-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .ws-tile{padding:5px 7px}.ws-tile b{font-size:15px}
   .hero{padding:16px 18px}
   .hero{flex-direction:column;align-items:stretch}
   .wx{width:auto;max-width:none}
@@ -548,13 +568,19 @@ function timeOpts(sel,blank){let o=blank?`<option value="">${blank}</option>`:""
 function setTime(sel,v){if(![...sel.options].some(o=>o.value===v))sel.add(new Option(t12l(v),v));sel.value=v}
 /* repeating activities are stored once (date = first day, repeat rule, optional repeatUntil, skip = dates removed one at a time)
    and expanded onto each matching day when the calendar asks */
-const REPEATS={"":"不重复",daily:"每天",weekly:"每周",monthly:"每月",halfyear:"每半年",yearly:"每年"};
+/* repeat = unit (daily/weekly/monthly/yearly) + repeatEvery N, e.g. every 2 weeks; older "halfyear" = every 6 months */
+const REP_UNITS={"":"不重复",daily:"天",weekly:"周",monthly:"个月",yearly:"年"};
+const repEvery=a=>a.repeat==="halfyear"?6:Math.max(1,parseInt(a.repeatEvery)||1);
+const repUnit=a=>a.repeat==="halfyear"?"monthly":a.repeat;
+function repLabel(a){const u=repUnit(a),n=repEvery(a);if(!u)return "不重复";if(u==="monthly"&&n===6)return "每半年";
+  return n===1?{daily:"每天",weekly:"每周",monthly:"每月",yearly:"每年"}[u]:`每 ${n} ${REP_UNITS[u]}`}
 function occursOn(a,d){
   if(!a.repeat)return a.date===d;
   if(!isDate(a.date)||d<a.date||(a.repeatUntil&&d>a.repeatUntil)||(a.skip||[]).includes(d))return false;
-  if(a.repeat==="daily")return true;
-  if(a.repeat==="weekly")return daysBetween(a.date,d)%7===0;
-  const step={monthly:1,halfyear:6,yearly:12}[a.repeat];if(!step)return false;
+  const u=repUnit(a),n=repEvery(a);
+  if(u==="daily")return daysBetween(a.date,d)%n===0;
+  if(u==="weekly")return daysBetween(a.date,d)%(7*n)===0;
+  const step={monthly:n,yearly:12*n}[u];if(!step)return false;
   const s=parseD(a.date),x=parseD(d),md=(x.getFullYear()-s.getFullYear())*12+x.getMonth()-s.getMonth();
   return md%step===0&&x.getDate()===Math.min(s.getDate(),new Date(x.getFullYear(),x.getMonth()+1,0).getDate());
 }
@@ -688,7 +714,7 @@ function vHome(){
 const evTitle=a=>a.clientId&&(a.cat==="client"||a.cat==="recruit")?clientName(a.clientId):a.title;
 const timeSpan=a=>a.start?`${t12l(a.start)}${a.end?" – "+t12l(a.end):""}`:"";
 function actRow(a){
-  return `<div class="item clickable" data-act="${itemAct(a)}" data-id="${a.id}" data-d="${a.date}"><span class="dot ${esc(a.cat)}"></span><div class="grow"><div class="t">${esc(evTitle(a))}${a.repeat?` <span class="rep" title="${REPEATS[a.repeat]}重复">↻</span>`:""}</div><div class="m num">${timeSpan(a)||"未定时间"}${a.location?" · "+esc(a.location):""}</div></div>${a.status&&a.status!=="planned"?`<span class="chip ${a.status==="done"?"ok":a.status==="cancelled"?"bad":"warn"}">${ACT_ST[a.status]}</span>`:""}</div>`;
+  return `<div class="item clickable" data-act="${itemAct(a)}" data-id="${a.id}" data-d="${a.date}"><span class="dot ${esc(a.cat)}"></span><div class="grow"><div class="t">${esc(evTitle(a))}${a.repeat?` <span class="rep" title="${repLabel(a)}重复">↻</span>`:""}</div><div class="m num">${timeSpan(a)||"未定时间"}${a.location?" · "+esc(a.location):""}</div></div>${a.status&&a.status!=="planned"?`<span class="chip ${a.status==="done"?"ok":a.status==="cancelled"?"bad":"warn"}">${ACT_ST[a.status]}</span>`:""}</div>`;
 }
 function fuRow(c){
   const reason=c.waitingOn&&c.waitingOn!=="none"?WAITING[c.waitingOn]:"";
@@ -710,8 +736,8 @@ function vCalendar(){
     return `<div class="cal-col${d===t?" today":""}" data-date="${d}">${nowLine}${laid.map(({a,lane,lanes})=>{
       const s=Math.max(toMin(a.start),420),e=Math.min(Math.max(toMin(a.end)||s+30,s+20),1380);
       const tt=evTitle(a);
-      return `<div class="ev ${esc(a.cat)} ${a.status==="cancelled"?"cancelled":""} ${a.status==="done"?"done":""}" data-act="${itemAct(a)}" data-id="${a.id}" data-d="${a.date}" title="${esc(tt)} ${timeSpan(a)}${a.repeat?" · "+REPEATS[a.repeat]+"重复":""}"
-        style="top:${(s-420)/9.6}%;height:calc(${(e-s)/9.6}% - 2px);left:calc(${lane/lanes*100}% + 2px);width:calc(${100/lanes}% - 4px);right:auto">
+      return `<div class="ev ${esc(a.cat)} ${a.status==="cancelled"?"cancelled":""} ${a.status==="done"?"done":""}" data-act="${itemAct(a)}" data-id="${a.id}" data-d="${a.date}" title="${esc(tt)} ${timeSpan(a)}${a.repeat?" · "+repLabel(a)+"重复":""}"
+        style="top:${(s-420)/9.6}%;--h:calc(${(e-s)/9.6}% - 2px);height:var(--h);left:calc(${lane/lanes*100}% + 2px);width:calc(${100/lanes}% - 4px);right:auto">
         <b>${a.repeat?'<span class="rep">↻</span> ':""}${esc(tt)}</b><i class="num">${timeSpan(a)}</i></div>`}).join("")}</div>`;
   }).join("");
   const heads=days.map(d=>{const dd=parseD(d);return `<div class="cal-dh${d===t?" today":""}" data-act="calDay" data-d="${d}">${WD[dd.getDay()]}<b class="num">${fmtShort(d)}</b></div>`}).join("");
@@ -732,28 +758,27 @@ function vCalendar(){
   ${weekLine(mondayOf(S.calMode==="week"?S.weekStart:S.calDay))}</div>`;
 }
 const STAGE_COLOR={prospect:"var(--s-prospect)",open:"var(--s-open)",present:"var(--s-present)",followup:"var(--s-followup)",closing:"var(--s-closing)"};
-/* week line chart under the calendar: one point per day (Mon–Sun); stage counts and policies as lines on the left axis, daily ANP as pale bars on the right axis */
+/* under the calendar: a line chart of Open / Present / Follow-up per day (Mon–Sun), then this week's results summary */
 function weekLine(ws){
-  const days=[...Array(7)].map((_,i)=>addDays(ws,i)),we=days[6];
-  const per=days.map(d=>{const ms=S.meetings.filter(m=>m.date===d),c=closedIn(d,d);const o={pol:c.n,anp:c.anp};STAGES.forEach(s=>o[s[0]]=ms.filter(m=>m.stage===s[0]).length);return o});
+  const days=[...Array(7)].map((_,i)=>addDays(ws,i)),we=days[6],t=today();
+  const LINES=STAGES.filter(s=>s[0]!=="closing");
+  const per=days.map(d=>{const ms=S.meetings.filter(m=>m.date===d&&m.module!=="recruit");const o={};LINES.forEach(s=>o[s[0]]=ms.filter(m=>m.stage===s[0]).length);return o});
   const wk=metrics(ws,we),wc=closedIn(ws,we);
-  const series=[...STAGES.map(([k,zh,en])=>({k,label:en,zh,color:STAGE_COLOR[k],dash:""})),{k:"pol",label:"成交保单",zh:"成交保单",color:"var(--ink)",dash:"5 4"}];
-  const W=900,H=130,pl=28,pr=62,pt=10,pb=22;
-  const maxC=Math.max(3,...per.flatMap(p=>series.map(s=>p[s.k]))),maxA=Math.max(1000,...per.map(p=>p.anp));
-  const x=i=>pl+(W-pl-pr)*(i+.5)/7,y=v=>pt+(H-pt-pb)*(1-v/maxC),ya=v=>pt+(H-pt-pb)*(1-v/maxA);
-  const k=v=>v>=1000?(Math.round(v/100)/10)+"k":String(Math.round(v));
-  const bw=(W-pl-pr)/7*.5,t=today();
-  const grid=[0,Math.round(maxC/2),maxC].map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${pl-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`).join("")
-    +[maxA/2,maxA].map(v=>`<text x="${W-pr+6}" y="${ya(v)+4}" fill="var(--ok)">RM ${k(v)}</text>`).join("");
-  const bars=per.map((p,i)=>p.anp?`<rect x="${x(i)-bw/2}" y="${ya(p.anp)}" width="${bw}" height="${H-pb-ya(p.anp)}" rx="3" fill="var(--ok-bg)"><title>${fmtD(days[i])} ANP ${rm(p.anp)}</title></rect>`:"").join("");
-  const lines=series.map(s=>`<polyline points="${per.map((p,i)=>x(i)+","+y(p[s.k])).join(" ")}" fill="none" stroke="${s.color}" stroke-width="2" stroke-dasharray="${s.dash}" stroke-linejoin="round"/>`+
-    per.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p[s.k])}" r="${p[s.k]?3.5:2}" fill="${p[s.k]?s.color:"var(--surface)"}" stroke="${s.color}" stroke-width="1.5"><title>${fmtD(days[i])} ${s.zh}：${p[s.k]}</title></circle>`).join("")).join("");
+  const W=900,H=118,pl=28,pr=12,pt=10,pb=22,maxC=Math.max(3,...per.flatMap(p=>LINES.map(s=>p[s[0]])));
+  const x=i=>pl+(W-pl-pr)*(i+.5)/7,y=v=>pt+(H-pt-pb)*(1-v/maxC);
+  const grid=[0,Math.round(maxC/2),maxC].map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${pl-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`).join("");
+  const lines=LINES.map(([k,zh,en])=>`<polyline points="${per.map((p,i)=>x(i)+","+y(p[k])).join(" ")}" fill="none" stroke="${STAGE_COLOR[k]}" stroke-width="2.2" stroke-linejoin="round"/>`+
+    per.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p[k])}" r="${p[k]?3.5:2}" fill="${p[k]?STAGE_COLOR[k]:"var(--surface)"}" stroke="${STAGE_COLOR[k]}" stroke-width="1.5"><title>${fmtD(days[i])} ${en}：${p[k]}</title></circle>`).join("")).join("");
   const xl=days.map((d,i)=>`<text x="${x(i)}" y="${H-6}" text-anchor="middle" font-weight="${d===t?700:400}">${WD[parseD(d).getDay()]} ${fmtShort(d)}</text>`).join("");
-  const lg=s=>`<span><i class="sw" style="background:${s.color}"></i>${s.label} <b>${s.k==="pol"?wc.n+" 张":wk.byStage[s.k]}</b></span>`;
-  return `<div class="wline"><div class="lg"><span class="sub">这周合计</span>${series.map(lg).join("")}
-      <span title="已确认的用确认保费，未确认的用预估年缴保费"><i class="sw" style="background:var(--ok-bg);border:1px solid var(--ok)"></i>NB（ANP）<b>${rm(wc.anp)}</b>${wc.est?`（含预估 ${wc.est} 张）`:""}</span></div>
-    <div class="lg"><span class="sub">招聘合计</span>${RSTAGES.map(([k,zh,en])=>`<span title="${zh}"><i class="sw" style="background:${RSTAGE_COLOR[k]}"></i>${en} <b>${wk.byR[k]}</b></span>`).join("")}</div>
-    <svg class="bar-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="这周每天的 Open、Present、Follow-up、Closing、成交保单和 ANP">${grid}${bars}${lines}${xl}</svg></div>`;
+  const tile=(label,val,color,sub)=>`<div class="ws-tile"${color?` style="--tc:${color}"`:""}><span>${color?`<i class="sw" style="background:${color}"></i>`:""}${label}</span><b class="num">${val}</b>${sub?`<small>${sub}</small>`:""}</div>`;
+  const rec=RSTAGES.filter(([k])=>wk.byR[k]);
+  return `<div class="wline">
+    <div class="lg">${LINES.map(([k,zh,en])=>`<span><i class="sw" style="background:${STAGE_COLOR[k]}"></i>${en}</span>`).join("")}<span class="sub">每天的会面次数</span></div>
+    <svg class="bar-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="这周每天的 Open、Present、Follow-up 次数">${grid}${lines}${xl}</svg>
+    <div class="ws-h">本周业绩总结 <span class="sub">${fmtShort(ws)} – ${fmtShort(we)}</span></div>
+    <div class="ws-grid">${LINES.map(([k,zh,en])=>tile(en,wk.byStage[k],STAGE_COLOR[k])).join("")}
+      ${tile("成交保单",wc.n+" 张","var(--s-closing)")}${tile("NB（ANP）",rm(wc.anp),"",wc.est?`含预估 ${wc.est} 张`:"")}</div>
+    ${rec.length?`<div class="lg"><span class="sub">招聘</span>${rec.map(([k,zh,en])=>`<span title="${zh}"><i class="sw" style="background:${RSTAGE_COLOR[k]}"></i>${en} <b>${wk.byR[k]}</b></span>`).join("")}</div>`:""}</div>`;
 }
 function weeklyChartsPanel(ws){
   const weeks=[...Array(8)].map((_,i)=>{const s=addDays(ws,-7*(7-i)),e=addDays(s,6);return{ws:s,by:metrics(s,e).byStage,closed:closedIn(s,e)}});
@@ -1380,9 +1405,9 @@ function activityForm(a,pre={}){
     <label class="f full"><span>标题</span><input type="text" name="title" list="titleList" autocomplete="off" value="${esc(a.title)}" placeholder="${titleList().length?"打字会跳出以前用过的标题；客户会面可留空":"客户会面可留空，会自动用客户名字"}"></label>
     <datalist id="titleList">${titleList().map(t=>`<option value="${esc(t)}"></option>`).join("")}</datalist>
     <label class="f req"><span>${a.repeat?"开始日期":"日期"}</span><input type="date" name="date" value="${esc(a.date)}"></label>
-    <label class="f"><span>重复</span><select name="repeat">${opts(REPEATS,a.repeat||"")}</select></label>
+    <div class="f"><span>重复</span><div class="rep-row"><span id="afEveryL">每</span><input type="number" name="repeatEvery" min="1" max="99" step="1" value="${repEvery(a)}" aria-label="间隔"><select name="repeat" aria-label="单位">${opts(REP_UNITS,repUnit(a)||"")}</select></div></div>
     <label class="f" id="afUntilW"><span>重复到（选填）</span><input type="date" name="repeatUntil" value="${esc(a.repeatUntil||"")}"></label>
-    ${a.repeat&&pre.occDate?`<div class="full hint">这是重复活动（${REPEATS[a.repeat]}），你打开的是 ${fmtD(pre.occDate)} 这一次。修改标题、时间等会套用到每一次。</div>`:""}
+    ${a.repeat&&pre.occDate?`<div class="full hint">这是重复活动（${repLabel(a)}），你打开的是 ${fmtD(pre.occDate)} 这一次。修改标题、时间等会套用到每一次。</div>`:""}
     <label class="f req"><span>开始</span><select name="start">${timeOpts(a.start)}</select></label>
     <label class="f req"><span>结束</span><select name="end">${timeOpts(a.end)}</select></label>
     <label class="f"><span>状态</span><select name="status">${opts(ACT_ST,a.status)}</select></label>
@@ -1398,8 +1423,9 @@ function activityForm(a,pre={}){
     r.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{if(isNew&&b.dataset.cat==="client"){const v=formData(f);closeModal();meetingForm(null,{date:v.date,start:v.start,end:v.end,fromCal:true});return}f.cat.value=b.dataset.cat;syncCat()});syncCat();
     f.start.onchange=()=>{const s=toMin(f.start.value);if(s!=null)setTime(f.end,fromMin(Math.min(s+60,1380)));conflictOk=false};
     f.end.onchange=f.date.onchange=()=>{conflictOk=false};
-    const syncRep=()=>{const w=r.querySelector("#afUntilW");w.hidden=!f.repeat.value;f.repeatUntil.disabled=w.hidden};f.repeat.onchange=syncRep;syncRep();
-    const delB=r.querySelector("#afDel");if(delB)delB.onclick=()=>confirmBox(a.repeat?"删除全部重复":"删除活动",a.repeat?`确定删除「${a.title}」的每一次（${REPEATS[a.repeat]}）吗？如果只是某一次不去，请用「只删除这一次」。`:`确定删除「${a.title}」吗？如果只是不去了，可以把状态改成「已取消」，记录会保留在报告里。`,"删除",()=>del("activities",a.id));
+    const syncRep=()=>{const w=r.querySelector("#afUntilW"),on=!!f.repeat.value;w.hidden=!on;f.repeatUntil.disabled=!on;
+      f.repeatEvery.hidden=!on;r.querySelector("#afEveryL").hidden=!on};f.repeat.onchange=syncRep;syncRep();
+    const delB=r.querySelector("#afDel");if(delB)delB.onclick=()=>confirmBox(a.repeat?"删除全部重复":"删除活动",a.repeat?`确定删除「${a.title}」的每一次（${repLabel(a)}）吗？如果只是某一次不去，请用「只删除这一次」。`:`确定删除「${a.title}」吗？如果只是不去了，可以把状态改成「已取消」，记录会保留在报告里。`,"删除",()=>del("activities",a.id));
     const skipB=r.querySelector("#afSkip");if(skipB)skipB.onclick=async()=>{try{await patch("activities",a.id,{skip:[...new Set([...(a.skip||[]),pre.occDate])],updatedAt:nowIso()});closeModal();toast(`已删除 ${fmtD(pre.occDate)} 这一次`)}catch(x){r.querySelector("#afErr").textContent=dbErr(x)}};
     const meetB=r.querySelector("#afMeet");if(meetB)meetB.onclick=()=>{closeModal();meetingForm(null,{cid:a.clientId,date:pre.occDate||a.date,start:a.start,end:a.end,activityId:a.id})};
     f.onsubmit=async e=>{e.preventDefault();const d=formData(f),err=r.querySelector("#afErr");
@@ -1415,13 +1441,14 @@ function activityForm(a,pre={}){
       if(d.status!=="cancelled"&&!conflictOk){
         const clash=actsOnly(d.date).filter(x=>x.id!==a.id&&x.status!=="cancelled"&&toMin(x.start)!=null&&toMin(x.start)<en&&(toMin(x.end)??toMin(x.start)+30)>s);
         if(clash.length){conflictOk=true;err.innerHTML=`时间冲突：${clash.map(x=>`「${esc(x.title)}」${esc(x.start)}–${esc(x.end)}`).join("、")}。如果确定要重叠，请再按一次「保存」。`;r.querySelector("#afSave").textContent="仍然保存";return}}
-      const rep=REPEATS[d.repeat]&&d.repeat?d.repeat:"";
+      const rep=d.repeat&&REP_UNITS[d.repeat]?d.repeat:"",every=rep?parseInt(d.repeatEvery):1;
+      if(rep&&(!Number.isInteger(every)||every<1||every>99))return err.textContent="重复间隔要填 1 到 99 的数字。";
       const rec={title:d.title,cat:d.cat,clientId:d.clientId||"",date:d.date,start:d.start,end:d.end,status:rep&&d.status==="done"?"planned":d.status,location:d.location||"",notes:d.notes||"",followUp:d.followUp||"",
-        repeat:rep,repeatUntil:rep?(d.repeatUntil||""):"",updatedAt:nowIso()};
+        repeat:rep,repeatEvery:rep?every:1,repeatUntil:rep?(d.repeatUntil||""):"",updatedAt:nowIso()};
       if(!isNew&&!rep&&!a.repeat&&(a.date!==d.date||a.start!==d.start)&&a.status==="planned"&&d.status==="planned"){rec.rescheduledCount=(a.rescheduledCount||0)+1;rec.originalDate=a.originalDate||a.date}
       try{const wasDone=a.status==="done";
         if(isNew){rec.createdAt=nowIso();await put("activities",newId("activities"),rec)}else await patch("activities",a.id,rec);
-        closeModal();toast(rec.rescheduledCount?"已改期":rep?`已保存（${REPEATS[rep]}重复）`:"已保存");
+        closeModal();toast(rec.rescheduledCount?"已改期":rep?`已保存（${repLabel(rec)}重复）`:"已保存");
         if(!isNew&&!wasDone&&d.status==="done"&&d.cat==="client"&&d.clientId){meetingForm(null,{cid:d.clientId,date:pre.occDate||d.date,start:d.start,end:d.end,activityId:a.id})}
       }catch(x){err.textContent=dbErr(x)}};
   }});
