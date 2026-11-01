@@ -269,6 +269,7 @@ body.fit #fab{display:none}
 .ev b{color:#25302e}
 .ev i{color:#6b7774}
 .dot.recruit{background:#b9a2e0}
+.rep{color:var(--muted);font-weight:400}
 .legend .dot.client,.item .dot.client{background:#7ccabd}.legend .dot.work,.item .dot.work{background:#97b5e8}.legend .dot.personal,.item .dot.personal{background:#eaa79e}
 .ev.cancelled{opacity:.5;text-decoration:line-through}
 .ev.done::after{content:"✓";position:absolute;right:5px;top:2px;font-weight:700}
@@ -533,12 +534,29 @@ function timeOpts(sel,blank){let o=blank?`<option value="">${blank}</option>`:""
   if(sel&&!vals.includes(sel)){vals.push(sel);vals.sort()}
   return o+vals.map(v=>`<option value="${v}" ${v===sel?"selected":""}>${t12l(v)}</option>`).join("")}
 function setTime(sel,v){if(![...sel.options].some(o=>o.value===v))sel.add(new Option(t12l(v),v));sel.value=v}
+/* repeating activities are stored once (date = first day, repeat rule, optional repeatUntil, skip = dates removed one at a time)
+   and expanded onto each matching day when the calendar asks */
+const REPEATS={"":"不重复",daily:"每天",weekly:"每周",monthly:"每月",halfyear:"每半年",yearly:"每年"};
+function occursOn(a,d){
+  if(!a.repeat)return a.date===d;
+  if(!isDate(a.date)||d<a.date||(a.repeatUntil&&d>a.repeatUntil)||(a.skip||[]).includes(d))return false;
+  if(a.repeat==="daily")return true;
+  if(a.repeat==="weekly")return daysBetween(a.date,d)%7===0;
+  const step={monthly:1,halfyear:6,yearly:12}[a.repeat];if(!step)return false;
+  const s=parseD(a.date),x=parseD(d),md=(x.getFullYear()-s.getFullYear())*12+x.getMonth()-s.getMonth();
+  return md%step===0&&x.getDate()===Math.min(s.getDate(),new Date(x.getFullYear(),x.getMonth()+1,0).getDate());
+}
+function actsOnly(d){return S.activities.filter(a=>occursOn(a,d)).map(a=>a.repeat?Object.assign({},a,{date:d,_occ:true}):a)}
+function actsBetween(s,e){const out=[];for(let d=s;d<=e;d=addDays(d,1))out.push(...actsOnly(d));return out}
+/* titles typed before (not the automatic 会面：/跟进： ones), most used first */
+function titleList(){const n={};for(const a of S.activities){const t=String(a.title||"").trim();if(t&&!/^(会面|跟进)：/.test(t))n[t]=(n[t]||0)+1}
+  return Object.keys(n).sort((a,b)=>n[b]-n[a]||a.localeCompare(b,"zh")).slice(0,40)}
 /* calendar items for a day: activities plus meeting records (a meeting already tied to an activity shows once, as that activity) */
 function actsOn(date){
   const ms=S.meetings.filter(m=>m.date===date&&!(m.activityId&&byId("activities",m.activityId))).map(m=>{const s=toMin(m.start);
     return{id:m.id,_m:true,title:(m.module==="recruit"?"招聘：":"会面：")+clientName(m.clientId),cat:m.module==="recruit"?"recruit":"client",clientId:m.clientId,date:m.date,
       start:m.start||"",end:m.end||(s!=null?fromMin(Math.min(s+60,1380)):""),status:"done",location:""}});
-  return [...S.activities.filter(a=>a.date===date),...ms].sort((a,b)=>(a.start||"").localeCompare(b.start||""));
+  return [...actsOnly(date),...ms].sort((a,b)=>(a.start||"").localeCompare(b.start||""));
 }
 const itemAct=a=>a._m?"editMeeting":"editActivity";
 function birthdaysSoon(n=7){
@@ -658,7 +676,7 @@ function vHome(){
 const evTitle=a=>a.clientId&&(a.cat==="client"||a.cat==="recruit")?clientName(a.clientId):a.title;
 const timeSpan=a=>a.start?`${t12l(a.start)}${a.end?" – "+t12l(a.end):""}`:"";
 function actRow(a){
-  return `<div class="item clickable" data-act="${itemAct(a)}" data-id="${a.id}"><span class="dot ${esc(a.cat)}"></span><div class="grow"><div class="t">${esc(evTitle(a))}</div><div class="m num">${timeSpan(a)||"未定时间"}${a.location?" · "+esc(a.location):""}</div></div>${a.status&&a.status!=="planned"?`<span class="chip ${a.status==="done"?"ok":a.status==="cancelled"?"bad":"warn"}">${ACT_ST[a.status]}</span>`:""}</div>`;
+  return `<div class="item clickable" data-act="${itemAct(a)}" data-id="${a.id}" data-d="${a.date}"><span class="dot ${esc(a.cat)}"></span><div class="grow"><div class="t">${esc(evTitle(a))}${a.repeat?` <span class="rep" title="${REPEATS[a.repeat]}重复">↻</span>`:""}</div><div class="m num">${timeSpan(a)||"未定时间"}${a.location?" · "+esc(a.location):""}</div></div>${a.status&&a.status!=="planned"?`<span class="chip ${a.status==="done"?"ok":a.status==="cancelled"?"bad":"warn"}">${ACT_ST[a.status]}</span>`:""}</div>`;
 }
 function fuRow(c){
   const reason=c.waitingOn&&c.waitingOn!=="none"?WAITING[c.waitingOn]:"";
@@ -680,9 +698,9 @@ function vCalendar(){
     return `<div class="cal-col${d===t?" today":""}" data-date="${d}">${nowLine}${laid.map(({a,lane,lanes})=>{
       const s=Math.max(toMin(a.start),420),e=Math.min(Math.max(toMin(a.end)||s+30,s+20),1380);
       const tt=evTitle(a);
-      return `<div class="ev ${esc(a.cat)} ${a.status==="cancelled"?"cancelled":""} ${a.status==="done"?"done":""}" data-act="${itemAct(a)}" data-id="${a.id}" title="${esc(tt)} ${timeSpan(a)}"
+      return `<div class="ev ${esc(a.cat)} ${a.status==="cancelled"?"cancelled":""} ${a.status==="done"?"done":""}" data-act="${itemAct(a)}" data-id="${a.id}" data-d="${a.date}" title="${esc(tt)} ${timeSpan(a)}${a.repeat?" · "+REPEATS[a.repeat]+"重复":""}"
         style="top:${(s-420)/9.6}%;height:calc(${(e-s)/9.6}% - 2px);left:calc(${lane/lanes*100}% + 2px);width:calc(${100/lanes}% - 4px);right:auto">
-        <b>${esc(tt)}</b><i class="num">${timeSpan(a)}</i></div>`}).join("")}</div>`;
+        <b>${a.repeat?'<span class="rep">↻</span> ':""}${esc(tt)}</b><i class="num">${timeSpan(a)}</i></div>`}).join("")}</div>`;
   }).join("");
   const heads=days.map(d=>{const dd=parseD(d);return `<div class="cal-dh${d===t?" today":""}" data-act="calDay" data-d="${d}">${WD[dd.getDay()]}<b class="num">${fmtShort(d)}</b></div>`}).join("");
   const unscheduled=days.flatMap(d=>actsOn(d)).filter(a=>toMin(a.start)==null);
@@ -805,7 +823,7 @@ function vClient(){
   const c=byId("clients",S.clientId);
   if(!c)return `<button class="btn" data-act="backClients">‹ 返回客户列表</button><div class="empty">找不到这位客户，可能已被删除。</div>`;
   const ms=meetingsOf(c.id),deals=S.deals.filter(d=>d.clientId===c.id),t=today();
-  const upcoming=S.activities.filter(a=>a.clientId===c.id&&a.date>=t&&a.status!=="cancelled").sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+  const upcoming=actsBetween(t,addDays(t,90)).filter(a=>a.clientId===c.id&&a.status!=="cancelled").slice(0,10).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
   const age=ageOf(c.dob);
   const f=(k,v)=>`<div><dt>${k}</dt><dd>${v==null||v===""?'<span class="sub">—</span>':v}</dd></div>`;
   const sum=S.summaries[c.id];
@@ -972,7 +990,7 @@ function metrics(s,e){
   const inforceDeals=S.deals.filter(d=>d.status==="inforce"&&inR(d.inforceDate,s,e));
   const countDeals=basis==="inforce"?inforceDeals:S.deals.filter(d=>inR(d.submitDate,s,e)&&!["agreed","declined","ntu"].includes(d.status));
   const missingMbd=countDeals.filter(d=>d.mbd==null||d.mbd==="").length;
-  const acts=S.activities.filter(a=>inR(a.date,s,e));
+  const acts=actsBetween(s,e);
   const nonCancel=acts.filter(a=>a.status!=="cancelled");
   return{meetings:ms.length,uniq,newP,byStage,byR,progressed,submitted,inforce:inforceDeals.length,
     mbd:countDeals.reduce((x,d)=>x+(Number(d.mbd)||0),0),premium:countDeals.reduce((x,d)=>x+(Number(d.premium)||0),0),missingMbd,
@@ -990,7 +1008,7 @@ function vReports(){
   const act=S.clients.filter(c=>c.status!=="inactive");
   const prioCount=k=>S.clients.filter(c=>c.priority===k&&c.status!=="inactive").length;
   const stageCount=k=>act.filter(c=>c.stage===k).length;
-  const next=S.activities.filter(a=>inR(a.date,addDays(e,1),addDays(e,7))&&a.status!=="cancelled").sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+  const next=actsBetween(addDays(e,1),addDays(e,7)).filter(a=>a.status!=="cancelled").sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
   const attention=act.filter(c=>c.priority==="A"&&(!isDate(c.nextFollowUp)||c.nextFollowUp<today()));
   const weeks=[...Array(8)].map((_,i)=>{const ws=addDays(mondayOf(today()),-7*(7-i));const mm=metrics(ws,addDays(ws,6));return{ws,meet:mm.meetings,pres:mm.byStage.present}});
   const st=(l,v,sm)=>`<div class="stat"><span>${l}</span><b class="num">${v}</b>${sm?`<small>${sm}</small>`:""}</div>`;
@@ -1315,7 +1333,7 @@ function meetingForm(m,pre={}){
         if(latest){if(md==="sales")cu.stage=stg2;else cu.rstage=stg2;cu.nextAction=d.nextAction||"";cu.nextFollowUp=d.nextFollowUp||"";cu.waitingOn=d.waitingOn||"none";if(d.concerns)cu.concerns=d.concerns;if(d.needs&&!cc.needs)cu.needs=d.needs}
         if(!cc.firstContact)cu.firstContact=d.date;
         await patch("clients",cid,cu);
-        if(pre.activityId&&byId("activities",pre.activityId))await patch("activities",pre.activityId,{status:"done",updatedAt:nowIso()});
+        if(pre.activityId&&byId("activities",pre.activityId)&&!byId("activities",pre.activityId).repeat)await patch("activities",pre.activityId,{status:"done",updatedAt:nowIso()});
         if(isNew&&d.fuTime&&isDate(d.nextFollowUp)&&isTime(d.fuTime)){const s=toMin(d.fuTime);await put("activities",newId("activities"),{title:"跟进："+(cc.name||d.name||""),cat:"client",clientId:cid,date:d.nextFollowUp,start:d.fuTime,end:fromMin(Math.min(s+30,1380)),status:"planned",followUp:d.nextAction||"",location:"",notes:"",createdAt:nowIso(),updatedAt:nowIso()})}
         if(anp!=null){
           if(dl0)await patch("deals",dl0.id,{product:d.product||dl0.product||"成交保单",estPremium:anp,premium:anp,policies:pols,updatedAt:nowIso()});
@@ -1333,8 +1351,12 @@ function activityForm(a,pre={}){
   modal(isNew?"新活动":"活动详情",`<form id="af" class="form" novalidate>
     <div class="full"><div class="seg" role="radiogroup" aria-label="类别">${Object.entries(CATS).map(([k,v])=>`<button type="button" data-cat="${k}" aria-pressed="${a.cat===k}"><span class="dot ${k}"></span> ${v}</button>`).join("")}</div><input type="hidden" name="cat" value="${esc(a.cat)}"></div>
     <label class="f full" id="afClientW"><span>客户</span><select name="clientId"><option value="">— 不连接客户 —</option>${clientOptions(a.clientId)}</select></label>
-    <label class="f full"><span>标题</span><input type="text" name="title" value="${esc(a.title)}" placeholder="客户会面可留空，会自动用客户名字"></label>
-    <label class="f req"><span>日期</span><input type="date" name="date" value="${esc(a.date)}"></label>
+    <label class="f full"><span>标题</span><input type="text" name="title" list="titleList" autocomplete="off" value="${esc(a.title)}" placeholder="${titleList().length?"打字会跳出以前用过的标题；客户会面可留空":"客户会面可留空，会自动用客户名字"}"></label>
+    <datalist id="titleList">${titleList().map(t=>`<option value="${esc(t)}"></option>`).join("")}</datalist>
+    <label class="f req"><span>${a.repeat?"开始日期":"日期"}</span><input type="date" name="date" value="${esc(a.date)}"></label>
+    <label class="f"><span>重复</span><select name="repeat">${opts(REPEATS,a.repeat||"")}</select></label>
+    <label class="f" id="afUntilW"><span>重复到（选填）</span><input type="date" name="repeatUntil" value="${esc(a.repeatUntil||"")}"></label>
+    ${a.repeat&&pre.occDate?`<div class="full hint">这是重复活动（${REPEATS[a.repeat]}），你打开的是 ${fmtD(pre.occDate)} 这一次。修改标题、时间等会套用到每一次。</div>`:""}
     <label class="f req"><span>开始</span><select name="start">${timeOpts(a.start)}</select></label>
     <label class="f req"><span>结束</span><select name="end">${timeOpts(a.end)}</select></label>
     <label class="f"><span>状态</span><select name="status">${opts(ACT_ST,a.status)}</select></label>
@@ -1343,14 +1365,16 @@ function activityForm(a,pre={}){
       <label class="f full"><span>说明 / 备注</span><textarea name="notes">${esc(a.notes)}</textarea></label>
       <label class="f full"><span>跟进事项</span><input type="text" name="followUp" value="${esc(a.followUp)}"></label></div></details>
     <div class="err full" id="afErr"></div>
-    <div class="modal-f full">${isNew?"":`<button type="button" class="btn danger" id="afDel" style="margin-right:auto">删除</button>`}${!isNew&&a.cat==="client"&&a.clientId?`<button type="button" class="btn" id="afMeet">完成并记录会面</button>`:""}<button type="button" class="btn" data-act="closeModal">取消</button><button class="btn primary" type="submit" id="afSave">保存</button></div></form>`,{onMount:r=>{
+    <div class="modal-f full">${isNew?"":`<button type="button" class="btn danger" id="afDel" style="margin-right:auto">${a.repeat?"删除全部重复":"删除"}</button>`}${!isNew&&a.repeat&&pre.occDate?`<button type="button" class="btn" id="afSkip">只删除这一次</button>`:""}${!isNew&&a.cat==="client"&&a.clientId?`<button type="button" class="btn" id="afMeet">完成并记录会面</button>`:""}<button type="button" class="btn" data-act="closeModal">取消</button><button class="btn primary" type="submit" id="afSave">保存</button></div></form>`,{onMount:r=>{
     const f=r.querySelector("#af"),cw=r.querySelector("#afClientW");let conflictOk=false;
     const syncCat=()=>{cw.hidden=f.cat.value!=="client";r.querySelectorAll("[data-cat]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.cat===f.cat.value))};
     r.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{f.cat.value=b.dataset.cat;syncCat()});syncCat();
     f.start.onchange=()=>{const s=toMin(f.start.value);if(s!=null)setTime(f.end,fromMin(Math.min(s+60,1380)));conflictOk=false};
     f.end.onchange=f.date.onchange=()=>{conflictOk=false};
-    const delB=r.querySelector("#afDel");if(delB)delB.onclick=()=>confirmBox("删除活动",`确定删除「${a.title}」吗？如果只是不去了，可以把状态改成「已取消」，记录会保留在报告里。`,"删除",()=>del("activities",a.id));
-    const meetB=r.querySelector("#afMeet");if(meetB)meetB.onclick=()=>{closeModal();meetingForm(null,{cid:a.clientId,date:a.date,start:a.start,end:a.end,activityId:a.id})};
+    const syncRep=()=>{const w=r.querySelector("#afUntilW");w.hidden=!f.repeat.value;f.repeatUntil.disabled=w.hidden};f.repeat.onchange=syncRep;syncRep();
+    const delB=r.querySelector("#afDel");if(delB)delB.onclick=()=>confirmBox(a.repeat?"删除全部重复":"删除活动",a.repeat?`确定删除「${a.title}」的每一次（${REPEATS[a.repeat]}）吗？如果只是某一次不去，请用「只删除这一次」。`:`确定删除「${a.title}」吗？如果只是不去了，可以把状态改成「已取消」，记录会保留在报告里。`,"删除",()=>del("activities",a.id));
+    const skipB=r.querySelector("#afSkip");if(skipB)skipB.onclick=async()=>{try{await patch("activities",a.id,{skip:[...new Set([...(a.skip||[]),pre.occDate])],updatedAt:nowIso()});closeModal();toast(`已删除 ${fmtD(pre.occDate)} 这一次`)}catch(x){r.querySelector("#afErr").textContent=dbErr(x)}};
+    const meetB=r.querySelector("#afMeet");if(meetB)meetB.onclick=()=>{closeModal();meetingForm(null,{cid:a.clientId,date:pre.occDate||a.date,start:a.start,end:a.end,activityId:a.id})};
     f.onsubmit=async e=>{e.preventDefault();const d=formData(f),err=r.querySelector("#afErr");
       if(d.cat!=="client")d.clientId="";
       if(!d.title&&d.cat==="client"&&d.clientId)d.title="会面："+clientName(d.clientId);
@@ -1359,16 +1383,19 @@ function activityForm(a,pre={}){
       const s=toMin(d.start),en=toMin(d.end);
       if(s==null||en==null)return err.textContent="请填写开始和结束时间。";
       if(en<=s)return err.textContent="结束时间要比开始时间晚。";
-      if(s<420||en>1380)return err.textContent="日历只显示 07:00 到 23:00，请把时间放在这个范围内。";
+      if(s<420||en>1380)return err.textContent="日历只显示 7 AM 到 11 PM，请把时间放在这个范围内。";
+      if(d.repeat&&d.repeatUntil&&d.repeatUntil<d.date)return err.textContent="「重复到」的日期不能早于开始日期。";
       if(d.status!=="cancelled"&&!conflictOk){
-        const clash=S.activities.filter(x=>x.id!==a.id&&x.date===d.date&&x.status!=="cancelled"&&toMin(x.start)!=null&&toMin(x.start)<en&&(toMin(x.end)??toMin(x.start)+30)>s);
+        const clash=actsOnly(d.date).filter(x=>x.id!==a.id&&x.status!=="cancelled"&&toMin(x.start)!=null&&toMin(x.start)<en&&(toMin(x.end)??toMin(x.start)+30)>s);
         if(clash.length){conflictOk=true;err.innerHTML=`时间冲突：${clash.map(x=>`「${esc(x.title)}」${esc(x.start)}–${esc(x.end)}`).join("、")}。如果确定要重叠，请再按一次「保存」。`;r.querySelector("#afSave").textContent="仍然保存";return}}
-      const rec={title:d.title,cat:d.cat,clientId:d.clientId||"",date:d.date,start:d.start,end:d.end,status:d.status,location:d.location||"",notes:d.notes||"",followUp:d.followUp||"",updatedAt:nowIso()};
-      if(!isNew&&(a.date!==d.date||a.start!==d.start)&&a.status==="planned"&&d.status==="planned"){rec.rescheduledCount=(a.rescheduledCount||0)+1;rec.originalDate=a.originalDate||a.date}
+      const rep=REPEATS[d.repeat]&&d.repeat?d.repeat:"";
+      const rec={title:d.title,cat:d.cat,clientId:d.clientId||"",date:d.date,start:d.start,end:d.end,status:rep&&d.status==="done"?"planned":d.status,location:d.location||"",notes:d.notes||"",followUp:d.followUp||"",
+        repeat:rep,repeatUntil:rep?(d.repeatUntil||""):"",updatedAt:nowIso()};
+      if(!isNew&&!rep&&!a.repeat&&(a.date!==d.date||a.start!==d.start)&&a.status==="planned"&&d.status==="planned"){rec.rescheduledCount=(a.rescheduledCount||0)+1;rec.originalDate=a.originalDate||a.date}
       try{const wasDone=a.status==="done";
         if(isNew){rec.createdAt=nowIso();await put("activities",newId("activities"),rec)}else await patch("activities",a.id,rec);
-        closeModal();toast(rec.rescheduledCount?"已改期":"已保存");
-        if(!isNew&&!wasDone&&d.status==="done"&&d.cat==="client"&&d.clientId){meetingForm(null,{cid:d.clientId,date:d.date,start:d.start,end:d.end,activityId:a.id})}
+        closeModal();toast(rec.rescheduledCount?"已改期":rep?`已保存（${REPEATS[rep]}重复）`:"已保存");
+        if(!isNew&&!wasDone&&d.status==="done"&&d.cat==="client"&&d.clientId){meetingForm(null,{cid:d.clientId,date:pre.occDate||d.date,start:d.start,end:d.end,activityId:a.id})}
       }catch(x){err.textContent=dbErr(x)}};
   }});
 }
@@ -1581,7 +1608,7 @@ const A={
   newMeeting:d=>meetingForm(null,{cid:d.cid||(S.view==="clients"?S.clientId:"")||"",ch:d.ch}),
   editMeeting:(d,_,e)=>{if(e)e.preventDefault();const m=byId("meetings",d.id);if(m)meetingForm(m)},
   newActivity:d=>activityForm(null,d.cid?{cid:d.cid,clientId:d.cid,cat:"client"}:{date:S.view==="calendar"&&S.calMode==="day"?S.calDay:today()}),
-  editActivity:(d,_,e)=>{e.preventDefault();const a=byId("activities",d.id);if(a)activityForm(a)},
+  editActivity:(d,_,e)=>{e.preventDefault();const a=byId("activities",d.id);if(a)activityForm(a,{occDate:a.repeat?d.d:""})},
   newDeal:d=>dealForm(null,{cid:d.cid}),
   editDeal:d=>dealForm(byId("deals",d.id)),
   closeModal:()=>closeModal(),
