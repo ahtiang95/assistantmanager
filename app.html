@@ -140,6 +140,10 @@ h3{font-size:14px;margin:0;font-weight:700}
 .pp-B1 input:checked+span{border-color:var(--pB);background:var(--pB-bg)}
 .pp-B2 input:checked+span{border-color:#2d63a8;background:#e2ecf8}
 .pp-C input:checked+span{border-color:var(--pC);background:var(--pC-bg)}
+.fu-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fu-row input[type=date]{max-width:200px}
+.fu-quick{display:flex;flex-wrap:wrap;gap:6px}
+.fu-quick .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .ai-master{background:#e3f2f5;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .chip.ex{border:1px dashed var(--muted);background:none}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
@@ -326,7 +330,14 @@ const PRIO_ICON={
   C:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></svg>'};
 const CATS={client:"客户会面",work:"会议/课程/培训",personal:"个人事务"};
 const ACT_ST={planned:"计划中",done:"已完成",cancelled:"已取消",rescheduled:"已改期"};
-const CHANNELS={f2f:"面对面",phone:"电话",wa:"WhatsApp",online:"线上会议",other:"其他"};
+const CHANNELS={wa:"WhatsApp",f2f:"面对面",phone:"电话",online:"线上会议",other:"其他"};
+/* channels ordered by how often SIM has used them (WhatsApp wins ties); the first one is the default for a new meeting */
+function channelOrder(){const n={};for(const m of S.meetings)if(CHANNELS[m.channel])n[m.channel]=(n[m.channel]||0)+1;
+  const keys=Object.keys(CHANNELS);return keys.sort((a,b)=>(n[b]||0)-(n[a]||0)||keys.indexOf(a)-keys.indexOf(b))}
+/* quick picks for the next follow-up date, counted from the meeting date */
+const FU_QUICK=[["1d","1 天后"],["3d","3 天后"],["1w","1 个星期后"],["2w","2 个星期后"],["1m","1 个月后"],["3m","3 个月后"]];
+function addPeriod(base,k){const n=parseInt(k),u=k.slice(-1);if(u==="d")return addDays(base,n);if(u==="w")return addDays(base,7*n);
+  const d=parseD(base),day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+n);d.setDate(Math.min(day,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));return ymd(d)}
 const WAITING={none:"无",proposal:"等我修改方案",docs:"等客户文件",uw:"等核保结果",decision:"等客户决定"};
 const DEAL_ST={agreed:"客户已同意",submitted:"已提交申请",underwriting:"核保中",approved:"已批准",inforce:"已生效",declined:"拒保",ntu:"未接受/取消"};
 const OPEN_DEAL=["agreed","submitted","underwriting","approved"];
@@ -1134,7 +1145,8 @@ function cleanClient(d){
 
 /* ---------- meeting form ---------- */
 function meetingForm(m,pre={}){
-  const isNew=!m;m=m||{date:today(),channel:pre.ch||"f2f",clientId:pre.cid||""};
+  const chOrder=channelOrder();
+  const isNew=!m;m=m||{date:today(),channel:pre.ch||chOrder[0],clientId:pre.cid||""};
   const c=m.clientId?byId("clients",m.clientId):null;
   const nowM=new Date().getHours()*60+new Date().getMinutes();
   if(isNew&&!m.start){m.end=pre.end||fromMin(Math.max(420,Math.min(nowM-nowM%15,1380)));m.start=pre.start||fromMin(Math.max(420,toMin(m.end)-60))}
@@ -1155,7 +1167,7 @@ function meetingForm(m,pre={}){
     <label class="f req"><span>日期</span><input type="date" name="date" value="${esc(m.date)}"></label>
     <label class="f"><span>开始</span><select name="start">${timeOpts(m.start,"— 不填 —")}</select></label>
     <label class="f"><span>结束</span><select name="end">${timeOpts(m.end,"— 不填 —")}</select></label>
-    <label class="f"><span>方式</span><select name="channel">${opts(CHANNELS,m.channel)}</select></label>
+    <label class="f"><span>方式</span><select name="channel">${chOrder.map(k=>`<option value="${k}" ${k===m.channel?"selected":""}>${CHANNELS[k]}</option>`).join("")}</select></label>
     <div class="f req full"><span>这次属于哪个模块</span><div class="mod-pick" role="radiogroup" aria-label="模块">
       <label><input type="radio" name="module" value="sales" ${mod==="sales"?"checked":""}><span>${ICONS.reports}个人销售</span></label>
       <label><input type="radio" name="module" value="recruit" ${mod==="recruit"?"checked":""}><span>${ICONS.clients}招聘</span></label></div></div>
@@ -1172,7 +1184,9 @@ function meetingForm(m,pre={}){
     <div class="full hint" id="mfPrioClosed" hidden>选了 Closing 成交：这位客户会变成「成交客户」，不再分优先级，可以在「成交客户」页查看。</div>
     <label class="f full"><span>讨论摘要（选填）</span><textarea name="summary" id="mfSummary" placeholder="${esc(STAGE_HINTS[stage])}">${esc(m.summary)}</textarea></label>
     <label class="f full"><span>下一步行动</span><input type="text" name="nextAction" value="${esc(m.nextAction)}" placeholder="例如：发修改后的方案给客户"></label>
-    <label class="f"><span>下次跟进日期</span><input type="date" name="nextFollowUp" value="${esc(m.nextFollowUp)}"></label>
+    <div class="f full"><span>下次跟进日期</span>
+      <div class="fu-row"><input type="date" name="nextFollowUp" value="${esc(m.nextFollowUp)}">
+        <div class="fu-quick" role="group" aria-label="快捷选择">${FU_QUICK.map(([k,l])=>`<button type="button" class="btn sm" data-fu="${k}">${l}</button>`).join("")}</div></div></div>
     <label class="f"><span>目前在等</span><select name="waitingOn">${opts(WAITING,(c&&c.waitingOn)||"none")}</select></label>
     <div class="full ai-master"><div class="row" style="justify-content:space-between"><b class="ttl">${ic("agent")}AI 大师</b>
       <button type="button" class="btn sm primary" id="mfAI" ${sample?"":"disabled"}>分析这位客户并给建议</button></div>
@@ -1218,6 +1232,9 @@ function meetingForm(m,pre={}){
       const ex=S.clients.find(c=>normName(c.name)===normName(q.value));ex?pick(ex):askNew()},150));
     syncNew();
     f.start.addEventListener("change",()=>{const s=toMin(f.start.value);if(s!=null)setTime(f.end,fromMin(Math.min(s+60,1380)))});
+    const fuBtns=[...r.querySelectorAll("[data-fu]")],markFu=k=>fuBtns.forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.fu===k)));
+    fuBtns.forEach(b=>b.onclick=()=>{const base=isDate(f.date.value)?f.date.value:today();f.nextFollowUp.value=addPeriod(base,b.dataset.fu);markFu(b.dataset.fu)});
+    f.nextFollowUp.addEventListener("change",()=>markFu(""));
     f.addEventListener("change",e=>{const n=e.target.name;if(n==="priority")f.dataset.pr="1";if(n==="rprio")f.dataset.rp="1";if(n==="stage"||n==="rstage"||n==="module"||n==="rprio"){if(n==="stage"||n==="rstage")f.dataset.st="1";syncMod()}});
     const aiB=r.querySelector("#mfAI");if(aiB)aiB.onclick=async()=>{
       const out=r.querySelector("#mfAIout"),d=formData(f),cid=sel.value,nmNew=(nw.querySelector("[name=name]")||{}).value;
