@@ -1350,7 +1350,8 @@ function meetingForm(m,pre={}){
   const isNew=!m;m=m||{date:today(),channel:pre.ch||chOrder[0],clientId:pre.cid||""};
   const c=m.clientId?byId("clients",m.clientId):null;
   const nowM=new Date().getHours()*60+new Date().getMinutes();
-  if(isNew&&!m.start){m.end=pre.end||fromMin(Math.max(420,Math.min(nowM-nowM%15,1380)));m.start=pre.start||fromMin(Math.max(420,toMin(m.end)-60))}
+  /* a new meeting starts at the moment SIM opens the form (unless a calendar slot gave a time); it ends an hour later */
+  if(isNew&&!m.start){m.start=pre.start||fromMin(nowM);m.end=pre.end||fromMin(Math.min(toMin(m.start)+60,1439))}
   if(pre.date)m.date=pre.date;
   const mod=m.module||pre.mod||"sales";
   const stage=mod==="sales"&&STAGE_IDX[m.stage]!=null?m.stage:(c&&STAGE_IDX[c.stage]!=null?c.stage:"open");
