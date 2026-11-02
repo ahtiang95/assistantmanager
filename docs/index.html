@@ -1676,7 +1676,7 @@ function backupData(){
    Runs ~2 minutes after the last change, and once a day on first open. Status is kept in this browser only. */
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
-const GD_LAST="baoxian-gdrive-last",GD_ERR="baoxian-gdrive-err";
+const GD_LAST="baoxian-gdrive-last",GD_ERR="baoxian-gdrive-err",GD_CAL="baoxian-gcal";
 const randKey=()=>{const a=new Uint8Array(12);crypto.getRandomValues(a);return [...a].map(b=>b.toString(16).padStart(2,"0")).join("")};
 const gdOk=u=>/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(u||"");
 let gdTimer=null;
@@ -1689,7 +1689,8 @@ async function gPost(body){
 async function gBackup(manual){
   if(S.dbState!=="local"||!gdOk(S.settings.gdriveUrl)||!S.settings.gdriveKey){if(manual)toast("请先完成 Google Drive 备份设置");return}
   try{const j=await gPost({filename:`baoxian-backup-${today()}.json`,data:JSON.stringify(backupData(),null,1)});
-    lsSet(GD_LAST,JSON.stringify({at:nowIso(),file:j.file}));lsSet(GD_ERR,"");if(manual)toast("已备份到 Google Drive")}
+    lsSet(GD_LAST,JSON.stringify({at:nowIso(),file:j.file}));lsSet(GD_ERR,"");lsSet(GD_CAL,j.cal==null?"old":j.cal);
+    if(manual)toast(j.cal==="ok"?"已备份，并同步到 Google 日历":"已备份到 Google Drive")}
   catch(e){lsSet(GD_ERR,String(e&&e.message||e));if(manual)toast("备份失败："+(e&&e.message||"连不上 Google Drive"))}
   if(S.view==="agent")schedule();
 }
@@ -1714,7 +1715,9 @@ function doPost(e) {
     while (all.hasNext()) files.push(all.next());
     files.sort((a, b) => b.getDateCreated() - a.getDateCreated());
     files.slice(KEEP).forEach(f => f.setTrashed(true));
-    return out({ ok: true, file: name, at: new Date().toISOString() });
+    let cal = 'ok';
+    try { syncCalendar(JSON.parse(req.data)); } catch (err) { cal = String(err); }
+    return out({ ok: true, file: name, at: new Date().toISOString(), cal: cal });
   } catch (err) {
     return out({ ok: false, error: String(err) });
   }
@@ -1723,6 +1726,73 @@ function doPost(e) {
 function out(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
+
+// ---------- 同步到 Google 日历「保险助理」（7 天前到 60 天后）----------
+const CAL_NAME = '保险助理';
+
+function syncCalendar(data) {
+  const cals = CalendarApp.getCalendarsByName(CAL_NAME);
+  const cal = cals.length ? cals[0] : CalendarApp.createCalendar(CAL_NAME, { timeZone: 'Asia/Kuala_Lumpur', color: CalendarApp.Color.TEAL });
+  const want = buildEvents(data, ymd(new Date(Date.now() - 7 * 864e5)), ymd(new Date(Date.now() + 60 * 864e5)));
+  const from = new Date(Date.now() - 8 * 864e5), to = new Date(Date.now() + 61 * 864e5);
+  const keep = {};
+  cal.getEvents(from, to).forEach(ev => {
+    const k = ev.getTag('bxk');
+    if (!k) return;                                   // 不动你自己在这个日历加的活动
+    const w = want[k];
+    if (w && !keep[k] && ev.getTitle() === w.title && ev.getStartTime().getTime() === w.start.getTime() &&
+        ev.getEndTime().getTime() === w.end.getTime() && ev.getDescription() === w.desc && ev.getLocation() === w.loc) keep[k] = 1;
+    else ev.deleteEvent();
+  });
+  Object.keys(want).forEach(k => {
+    if (keep[k]) return;
+    const w = want[k];
+    cal.createEvent(w.title, w.start, w.end, { location: w.loc, description: w.desc }).setTag('bxk', k);
+  });
+}
+
+function buildEvents(data, fromDay, toDay) {
+  const names = {}, linked = {}, want = {};
+  (data.clients || []).forEach(c => { names[c.id] = c.name; });
+  (data.activities || []).forEach(a => { linked[a.id] = 1; });
+  const add = (key, title, day, start, end, loc, desc) => {
+    if (!start) return;
+    const s = at(day, start), e = end ? at(day, end) : new Date(s.getTime() + 3600e3);
+    want[key] = { title: title, start: s, end: e > s ? e : new Date(s.getTime() + 3600e3), loc: loc || '', desc: desc || '' };
+  };
+  (data.activities || []).forEach(a => {
+    if (!a.date || a.status === 'cancelled') return;
+    const title = a.clientId && (a.cat === 'client' || a.cat === 'recruit') ? (names[a.clientId] || a.title) : a.title;
+    for (let d = fromDay; d <= toDay; d = addDays(d, 1))
+      if (occursOn(a, d)) add('a-' + a.id + '-' + d, title, d, a.start, a.end, a.location, a.notes);
+  });
+  (data.meetings || []).forEach(m => {
+    if (!m.date || m.date < fromDay || m.date > toDay || (m.activityId && linked[m.activityId])) return;
+    const desc = [m.summary, m.nextAction ? '下一步：' + m.nextAction : ''].filter(String).join('\\n');
+    add('m-' + m.id, names[m.clientId] || '会面', m.date, m.start, m.end, '', desc);
+  });
+  return want;
+}
+
+// 跟 App 一样的重复规则：每 N 天 / 周 / 个月 / 年
+function occursOn(a, d) {
+  if (!a.repeat) return a.date === d;
+  if (d < a.date || (a.repeatUntil && d > a.repeatUntil) || (a.skip || []).indexOf(d) >= 0) return false;
+  const unit = a.repeat === 'halfyear' ? 'monthly' : a.repeat, n = a.repeat === 'halfyear' ? 6 : Math.max(1, parseInt(a.repeatEvery) || 1);
+  const days = Math.round((day(d) - day(a.date)) / 864e5);
+  if (unit === 'daily') return days % n === 0;
+  if (unit === 'weekly') return days % (7 * n) === 0;
+  const step = unit === 'monthly' ? n : unit === 'yearly' ? 12 * n : 0;
+  if (!step) return false;
+  const s = day(a.date), x = day(d), md = (x.getUTCFullYear() - s.getUTCFullYear()) * 12 + x.getUTCMonth() - s.getUTCMonth();
+  const last = new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 0)).getUTCDate();
+  return md % step === 0 && x.getUTCDate() === Math.min(s.getUTCDate(), last);
+}
+
+function day(s) { const p = s.split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2])); }
+function addDays(s, n) { const t = day(s); t.setUTCDate(t.getUTCDate() + n); return ymd(t, true); }
+function ymd(t, isUtc) { if (!isUtc) t = new Date(t.getTime() + 8 * 3600e3); return t.toISOString().slice(0, 10); }
+function at(d, hm) { const p = d.split('-').map(Number), q = hm.split(':').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2], q[0] - 8, q[1])); }   // 马来西亚时间 (UTC+8)
 `}
 function gdriveSection(){
   const st=S.settings,key=st.gdriveKey||S.gdNewKey||(S.gdNewKey=randKey());
@@ -1748,7 +1818,26 @@ function gdriveSection(){
       <label class="f full"><span>网页应用网址（Web app URL）</span><input type="text" name="gdriveUrl" value="${esc(st.gdriveUrl||"")}" placeholder="https://script.google.com/macros/s/…/exec"></label>
       <input type="hidden" name="gdriveKey" value="${esc(key)}">
       <div class="full row"><button class="btn primary" type="submit">保存并测试</button><button type="button" class="btn" data-act="gdriveNow" ${on?"":"disabled"}>立即备份到 Google Drive</button><span class="err" id="gdMsg"></span></div></form>
-    <div class="hint">要恢复资料：到 Google Drive「保险助理备份」下载最新的文件，再用上面的「从备份恢复」。</div></div>`;
+    <div class="hint">要恢复资料：到 Google Drive「保险助理备份」下载最新的文件，再用上面的「从备份恢复」。</div>
+    ${gcalSection(on)}</div>`;
+}
+/* Google Calendar sync rides on the backup script: each backup also refreshes a Google calendar named 保险助理 (7 days back to 60 days ahead) */
+function gcalSection(on){
+  const cs=lsGet(GD_CAL)||"";
+  const status=!on?`<span class="chip">先完成上面的 Google Drive 备份设置</span>`:cs==="ok"?`<span class="chip ok">已同步到 Google 日历「保险助理」</span>`
+    :cs==="old"?`<span class="chip warn">备份程序还是旧版本，请按第 1 步更新</span>`:cs?`<span class="chip bad">日历同步失败：${esc(cs)}</span>`:`<span class="chip">等待下一次备份后同步</span>`;
+  return `<div style="border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px">
+    <h3 class="ttl">${ic("calendar")}同步到 Google 日历 / iPhone 小组件</h3>
+    <div class="row">${status}</div>
+    <div class="hint">每次自动备份时，成功宝典的活动和会面（7 天前到 60 天后）会同步到你 Google 账号里一个叫「保险助理」的日历。iPhone 加入 Google 账号后，就能用「日历」小组件在桌面看到。只同步过去，在 Google 日历里修改不会改回 App。</div>
+    <details ${on&&cs!=="ok"?"open":""}><summary>设置步骤</summary>
+      <ol style="margin:8px 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px">
+        <li><b>更新备份程序</b>（用电脑）：按上面的「复制代码」，到 script.google.com 打开你的项目，全部替换后按保存。再按 <b>部署 → 管理部署</b>，点铅笔图标，「版本」选 <b>新版本</b>，按部署。Google 会请你再授权一次（这次多了日历权限），选「允许」。网页应用网址不会变。</li>
+        <li>回到这里按「立即备份到 Google Drive」，上面会显示「已同步到 Google 日历」。打开 Google 日历，就会看到「保险助理」这个日历。</li>
+        <li><b>iPhone</b>：设置 → 日历 → 账户 → 添加账户 → Google，登录同一个 Google 账号，打开「日历」开关（已经加过的话跳过）。再打开 iPhone「日历」App → 下方「日历」→ 勾选「保险助理」。</li>
+        <li><b>加小组件</b>：在 iPhone 桌面长按空白处 → 左上角「+」→ 搜「日历」→ 选大小 → 「添加小组件」。也可以用 Google 日历 App 的小组件。</li>
+      </ol>
+      <div class="hint">iPhone 从 Google 拿新资料通常要几分钟。想快一点：设置 → 日历 → 账户 → 获取新数据，设成「推送」或「每 15 分钟」。</div></details></div>`;
 }
 async function backup(){
   const data=backupData();
