@@ -834,7 +834,7 @@ function vCalendar(){
         <b>${a.repeat?'<span class="rep">↻</span> ':""}${esc(tt)}</b><i class="num">${timeSpan(a)}</i></div>`}).join("")}</div>`;
   }).join("");
   const heads=days.map(d=>{const dd=parseD(d);return `<div class="cal-dh${d===t?" today":""}" data-act="calDay" data-d="${d}">${WD[dd.getDay()]}<b class="num">${fmtShort(d)}</b></div>`}).join("");
-  const unscheduled=days.flatMap(d=>actsOn(d)).filter(a=>toMin(a.start)==null);
+  const unscheduled=days.flatMap(d=>actsOn(d)).filter(a=>toMin(a.start)==null&&!a._m);
   return `<div class="cal-page"><div class="cal-top"><h1 class="ttl">${ic("calendar")}${label}</h1>
     <div class="row">
       <div class="seg"><button data-act="calMode" data-m="week" aria-pressed="${S.calMode==="week"}">周</button><button data-act="calMode" data-m="day" aria-pressed="${S.calMode==="day"}">日</button></div>
@@ -1835,9 +1835,21 @@ function restoreFrom(file){
   rd.onload=()=>{let data;try{data=JSON.parse(rd.result)}catch(e){toast("这个文件不是有效的备份");return}
     if(!data||data.app!=="pangkor-sales-assistant"){toast("这个文件不是本系统的备份");return}
     const n=["clients","meetings","activities","deals"].map(c=>(data[c]||[]).length);
-    confirmBox("从备份恢复",`备份时间：${fmtDT(data.exportedAt)}\n客户 ${n[0]} 位，会面 ${n[1]} 条，活动 ${n[2]} 个，保单 ${n[3]} 份。\n\n相同编号的记录会被备份里的版本覆盖；备份里没有的现有记录会保留。`,"开始恢复",async()=>{
-      for(const c of ["clients","meetings","activities","deals","drafts"])for(const row of (data[c]||[])){if(!row||!row.id)continue;const {id,...rest}=row;await put(c,id,rest)}
-      if(data.settings)await db.doc("settings/main").set(data.settings);toast("恢复完成")})};
+    /* imported clients whose name already exists in the app are merged into that client instead of being added twice */
+    const idMap={};
+    for(const row of data.clients||[]){if(!row||!row.imported)continue;const ex=S.clients.find(c=>c.id!==row.id&&normName(c.name)===normName(row.name));if(ex)idMap[row.id]=ex.id}
+    const merged=Object.keys(idMap).length;
+    confirmBox(data.source?"导入客户资料":"从备份恢复",`${data.source?`来源：${data.source}\n`:`备份时间：${fmtDT(data.exportedAt)}\n`}客户 ${n[0]} 位，会面 ${n[1]} 条，活动 ${n[2]} 个，保单 ${n[3]} 份。\n${merged?`其中 ${merged} 位客户 App 里已经有同名的，记录会合并到原来的客户。\n`:""}\n相同编号的记录会被这个文件里的版本覆盖；文件里没有的现有记录会保留。`,data.source?"开始导入":"开始恢复",async()=>{
+      toast("正在处理，请稍等…");
+      for(const c of ["clients","meetings","activities","deals","drafts"])for(const row of (data[c]||[])){if(!row||!row.id)continue;const {id,...rest}=row;
+        if(c==="clients"&&idMap[id]){const ex=byId("clients",idMap[id]);if(ex){const u={updatedAt:nowIso()};
+            if(rest.lastContact&&(!ex.lastContact||rest.lastContact>ex.lastContact))u.lastContact=rest.lastContact;
+            if(rest.firstContact&&(!ex.firstContact||rest.firstContact<ex.firstContact))u.firstContact=rest.firstContact;
+            if(rest.notes&&!(ex.notes||"").includes(rest.notes))u.notes=[ex.notes,rest.notes].filter(Boolean).join("\n");
+            await patch("clients",ex.id,u)}continue}
+        if(rest.clientId&&idMap[rest.clientId])rest.clientId=idMap[rest.clientId];
+        await put(c,id,rest)}
+      if(data.settings)await db.doc("settings/main").set(data.settings);toast(data.source?`导入完成：${n[0]} 位客户，${n[1]} 条会面记录`:"恢复完成")})};
   rd.readAsText(file);
 }
 
